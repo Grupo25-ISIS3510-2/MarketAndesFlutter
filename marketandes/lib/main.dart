@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:marketandes/views/widget_tree.dart';
 import 'package:marketandes/widgets/navbar_widget.dart';
 
 void main() {
@@ -30,20 +31,7 @@ class _MyAppState extends State<MyApp> {
           brightness: Brightness.dark,
         ),
       ),
-      home: Scaffold(
-        appBar: AppBar(
-          backgroundColor: Color(0xFF00296B),
-          title: SizedBox(
-            height: 60,
-            child: Image.asset(
-              "assets/images/MartekAndesAppBar.png",
-              fit: BoxFit.contain,
-            ),
-          ),
-          centerTitle: true,
-        ),
-        bottomNavigationBar: NavbarWidget(),
-      ),
+      home: WidgetTree(),
     );
   }
 }

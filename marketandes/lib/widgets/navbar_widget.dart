@@ -1,18 +1,14 @@
 import 'package:flutter/material.dart';
 
-class NavbarWidget extends StatefulWidget {
-  const NavbarWidget({super.key});
+class NavbarWidget extends StatelessWidget {
+  final int selectedIndex;
 
-  @override
-  State<NavbarWidget> createState() => _NavbarWidgetState();
-}
+  const NavbarWidget({super.key, required this.selectedIndex});
 
-class _NavbarWidgetState extends State<NavbarWidget> {
-  int selectedIndex = 0;
   @override
   Widget build(BuildContext context) {
     return NavigationBar(
-      backgroundColor: Color(0xFF00296B),
+      backgroundColor: const Color(0xFF00296B),
       destinations: [
         NavigationDestination(
           icon: Image.asset("assets/images/cartIcon.png"),
@@ -40,11 +36,6 @@ class _NavbarWidgetState extends State<NavbarWidget> {
           label: "",
         ),
       ],
-      onDestinationSelected: (int value) {
-        setState(() {
-          selectedIndex = value;
-        });
-      },
       selectedIndex: selectedIndex,
     );
   }
