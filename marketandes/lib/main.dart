@@ -31,7 +31,17 @@ class _MyAppState extends State<MyApp> {
         ),
       ),
       home: Scaffold(
-        appBar: AppBar(title: Text("Flutter Mapp"), centerTitle: true),
+        appBar: AppBar(
+          backgroundColor: Color(0xFF00296B),
+          title: SizedBox(
+            height: 60,
+            child: Image.asset(
+              "assets/images/MartekAndesAppBar.png",
+              fit: BoxFit.contain,
+            ),
+          ),
+          centerTitle: true,
+        ),
         bottomNavigationBar: NavbarWidget(),
       ),
     );
