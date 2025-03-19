@@ -5,16 +5,16 @@ import 'package:marketandes/views/pages/home_page.dart';
 import 'package:marketandes/views/pages/start_page.dart';
 import '../widgets/navbar_widget.dart';
 
-List<Widget> pages = [StartPage(), HomePage(), AddPage()];
+List<Widget> pages = [HomePage(), AddPage(), StartPage()];
 
 class WidgetTree extends StatelessWidget {
   const WidgetTree({super.key});
 
   // Índices donde SÍ hay AppBar y BottomNavBar
-  final List<int> pagesWithBars = const [1, 2];
+  final List<int> pagesWithBars = const [0, 1];
 
   // Tus páginas
-  static final List<Widget> pages = [StartPage(), HomePage(), AddPage()];
+  static final List<Widget> pages = [HomePage(), AddPage(), StartPage()];
 
   @override
   Widget build(BuildContext context) {
@@ -40,9 +40,7 @@ class WidgetTree extends StatelessWidget {
                   : null,
           body: pages[selectedIndex],
           bottomNavigationBar:
-              showBars
-                  ? NavbarWidget(selectedIndex: selectedPageNotifier.value - 1)
-                  : null,
+              showBars ? NavbarWidget(selectedIndex: selectedIndex) : null,
         );
       },
     );
