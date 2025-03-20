@@ -6,7 +6,12 @@ import 'package:marketandes/views/pages/login_register.dart';
 import 'package:marketandes/views/pages/start_page.dart';
 import 'package:marketandes/views/widget_tree.dart'; // Nuevo archivo opcional
 
-void main() {
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   runApp(const MyApp());
 }
 
