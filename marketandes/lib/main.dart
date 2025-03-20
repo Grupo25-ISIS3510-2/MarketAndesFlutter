@@ -6,7 +6,7 @@ import 'package:marketandes/views/pages/login_register.dart';
 import 'package:marketandes/views/pages/register_page.dart';
 import 'package:marketandes/views/pages/start_page.dart';
 import 'package:marketandes/views/widget_tree.dart'; // Nuevo archivo opcional
-
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 

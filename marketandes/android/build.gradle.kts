@@ -1,3 +1,14 @@
+buildscript {
+    repositories {
+        google()            // 👈 Necesario para obtener los plugins de Google
+        mavenCentral()
+    }
+    dependencies {
+        // 👇 Este classpath habilita la integración de Firebase en el build
+        classpath("com.google.gms:google-services:4.3.15")
+    }
+}
+
 allprojects {
     repositories {
         google()
@@ -12,6 +23,7 @@ subprojects {
     val newSubprojectBuildDir: Directory = newBuildDir.dir(project.name)
     project.layout.buildDirectory.value(newSubprojectBuildDir)
 }
+
 subprojects {
     project.evaluationDependsOn(":app")
 }

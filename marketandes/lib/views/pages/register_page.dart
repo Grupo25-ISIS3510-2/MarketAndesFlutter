@@ -12,6 +12,7 @@ class RegisterPage extends StatefulWidget {
 class _RegisterPageState extends State<RegisterPage> {
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
+  final TextEditingController fullNameController = TextEditingController();
 
   String? errorMessage;
   bool isLoading = false;
@@ -25,6 +26,7 @@ class _RegisterPageState extends State<RegisterPage> {
 
     final email = emailController.text.trim();
     final password = passwordController.text.trim();
+    final fullName = fullNameController.text.trim();
 
     try {
       if (!email.endsWith('@uniandes.edu.co')) {
@@ -39,8 +41,18 @@ class _RegisterPageState extends State<RegisterPage> {
           message: 'Contraseña muy corta',
         );
       }
+      if (fullName.isEmpty) {
+        throw FirebaseAuthException(
+          code: 'wrong-username',
+          message: 'Necesita poner un nombre de usuario.',
+        );
+      }
 
-      await authService.value.createAccount(email: email, password: password);
+      await authService.value.createAccount(
+        email: email,
+        password: password,
+        fullName: fullName,
+      );
 
       // Si llega aquí, el usuario inició sesión correctamente
       Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
@@ -54,6 +66,7 @@ class _RegisterPageState extends State<RegisterPage> {
       });
     } catch (e) {
       // Cualquier otro error inesperado
+      print('Unexpected error: $e');
       debugPrint('Unexpected error: $e');
       setState(() {
         errorMessage = 'Ocurrió un error inesperado. Inténtalo de nuevo.';
@@ -82,6 +95,8 @@ class _RegisterPageState extends State<RegisterPage> {
         return 'Demasiados intentos fallidos. Espera un momento e intenta de nuevo.';
       case 'network-request-failed':
         return 'Sin conexión. Verifica tu internet.';
+      case 'wrong-username':
+        return 'Necesita poner un nombre de usuario.';
       default:
         return e.message ?? 'Error desconocido. Intenta de nuevo.';
     }
@@ -199,6 +214,7 @@ class _RegisterPageState extends State<RegisterPage> {
                               SizedBox(
                                 height: 40,
                                 child: TextField(
+                                  controller: fullNameController,
                                   style: const TextStyle(color: Colors.black87),
                                   decoration: InputDecoration(
                                     hintText: "nombre y apelido",
