@@ -3,6 +3,7 @@ import 'package:marketandes/data/notifiers.dart';
 import 'package:marketandes/views/pages/add_page.dart';
 import 'package:marketandes/views/pages/home_page.dart';
 import 'package:marketandes/views/pages/login_page.dart';
+import 'package:marketandes/views/pages/login_register.dart';
 import 'package:marketandes/views/pages/start_page.dart';
 import '../widgets/navbar_widget.dart';
 
@@ -20,6 +21,7 @@ class WidgetTree extends StatelessWidget {
     AddPage(),
     StartPage(),
     LoginPage(),
+    LoginRegisterPage(),
   ];
 
   @override
