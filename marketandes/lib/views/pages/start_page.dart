@@ -13,7 +13,7 @@ class _StartPageState extends State<StartPage> {
     super.initState();
 
     Future.delayed(const Duration(seconds: 5), () {
-      Navigator.pushReplacementNamed(context, '/register');
+      Navigator.pushReplacementNamed(context, '/init');
     });
   }
 

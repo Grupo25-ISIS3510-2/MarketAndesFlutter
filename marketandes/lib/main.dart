@@ -3,6 +3,7 @@ import 'package:marketandes/views/pages/add_page.dart';
 import 'package:marketandes/views/pages/home_page.dart';
 import 'package:marketandes/views/pages/login_page.dart';
 import 'package:marketandes/views/pages/login_register.dart';
+import 'package:marketandes/views/pages/register_page.dart';
 import 'package:marketandes/views/pages/start_page.dart';
 import 'package:marketandes/views/widget_tree.dart'; // Nuevo archivo opcional
 
@@ -32,7 +33,8 @@ class MyApp extends StatelessWidget {
       routes: {
         '/': (context) => const StartPage(),
         '/login': (context) => const LoginPage(),
-        '/register': (context) => const LoginRegisterPage(),
+        '/register': (context) => const RegisterPage(),
+        '/init': (context) => const LoginRegisterPage(),
         '/home':
             (context) =>
                 const HomeWithNavbar(), // Esta es la que tiene el navbar
