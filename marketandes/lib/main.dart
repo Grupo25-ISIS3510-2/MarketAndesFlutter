@@ -1,38 +1,40 @@
 import 'package:flutter/material.dart';
-import 'package:marketandes/views/widget_tree.dart';
-import 'package:marketandes/widgets/navbar_widget.dart';
+import 'package:marketandes/views/pages/add_page.dart';
+import 'package:marketandes/views/pages/home_page.dart';
+import 'package:marketandes/views/pages/login_page.dart';
+import 'package:marketandes/views/pages/login_register.dart';
+import 'package:marketandes/views/pages/start_page.dart';
+import 'package:marketandes/views/widget_tree.dart'; // Nuevo archivo opcional
 
 void main() {
   runApp(const MyApp());
 }
 
-//stateless
-//material app
-// acafold
-// stateless not Can refresh
-// statefull Can refresh
-
-class MyApp extends StatefulWidget {
+class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
-  @override
-  State<MyApp> createState() => _MyAppState();
-}
-
-class _MyAppState extends State<MyApp> {
-  int selectedIndex = 0;
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
-          seedColor: Color(0xFF00296B),
+          seedColor: const Color(0xFF00296B),
           brightness: Brightness.dark,
         ),
       ),
-      home: WidgetTree(),
+      initialRoute: '/',
+      routes: {
+        '/': (context) => const StartPage(),
+        '/login': (context) => const LoginPage(),
+        '/register': (context) => const LoginRegisterPage(),
+        '/home':
+            (context) =>
+                const HomeWithNavbar(), // Esta es la que tiene el navbar
+        '/add':
+            (context) =>
+                const AddPage(), // Si quieres abrir add_page sin navbar
+      },
     );
   }
 }

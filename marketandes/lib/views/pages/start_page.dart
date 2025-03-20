@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:marketandes/data/notifiers.dart';
 
 class StartPage extends StatefulWidget {
   const StartPage({super.key});
@@ -14,7 +13,7 @@ class _StartPageState extends State<StartPage> {
     super.initState();
 
     Future.delayed(const Duration(seconds: 5), () {
-      selectedPageNotifier.value = 4;
+      Navigator.pushReplacementNamed(context, '/register');
     });
   }
 

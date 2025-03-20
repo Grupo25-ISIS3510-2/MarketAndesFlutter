@@ -1,50 +1,39 @@
 import 'package:flutter/material.dart';
-import 'package:marketandes/data/notifiers.dart';
 
 class NavbarWidget extends StatelessWidget {
   final int selectedIndex;
-  const NavbarWidget({super.key, required this.selectedIndex});
+  final Function(int) onItemTapped;
+
+  const NavbarWidget({
+    super.key,
+    required this.selectedIndex,
+    required this.onItemTapped,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return ValueListenableBuilder(
-      valueListenable: selectedPageNotifier,
-      builder: (context, selectedPage, child) {
-        return NavigationBar(
-          backgroundColor: const Color(0xFF00296B),
-          destinations: [
-            NavigationDestination(
-              icon: Image.asset("assets/images/cartIcon.png"),
-              selectedIcon: Image.asset("assets/images/cartIconSelected.png"),
-              label: "",
-            ),
-            NavigationDestination(
-              icon: Image.asset("assets/images/addIcon.png"),
-              selectedIcon: Image.asset("assets/images/addIconSelected.png"),
-              label: "",
-            ),
-            NavigationDestination(
-              icon: Image.asset("assets/images/homeIcon.png"),
-              selectedIcon: Image.asset("assets/images/homeIconSelected.png"),
-              label: "",
-            ),
-            NavigationDestination(
-              icon: Image.asset("assets/images/tradeIcon.png"),
-              selectedIcon: Image.asset("assets/images/tradeIconSelected.png"),
-              label: "",
-            ),
-            NavigationDestination(
-              icon: Image.asset("assets/images/chatIcon.png"),
-              selectedIcon: Image.asset("assets/images/chatIconSelected.png"),
-              label: "",
-            ),
-          ],
-          onDestinationSelected: (int value) {
-            selectedPageNotifier.value = value;
-          },
-          selectedIndex: selectedIndex,
-        );
-      },
+    return NavigationBar(
+      backgroundColor: const Color(0xFF00296B),
+      selectedIndex: selectedIndex,
+      onDestinationSelected: onItemTapped,
+      destinations: [
+        NavigationDestination(
+          icon: Image.asset("assets/images/homeIcon.png"),
+          selectedIcon: Image.asset("assets/images/homeIconSelected.png"),
+          label: "",
+        ),
+        NavigationDestination(
+          icon: Image.asset("assets/images/addIcon.png"),
+          selectedIcon: Image.asset("assets/images/addIconSelected.png"),
+          label: "",
+        ),
+        // Si quieres agregar más pestañas, agrégalas aquí:
+        // NavigationDestination(
+        //   icon: Image.asset("assets/images/tradeIcon.png"),
+        //   selectedIcon: Image.asset("assets/images/tradeIconSelected.png"),
+        //   label: "",
+        // ),
+      ],
     );
   }
 }

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:marketandes/data/notifiers.dart';
 
 class LoginPage extends StatelessWidget {
   const LoginPage({super.key});
@@ -46,7 +45,7 @@ class LoginPage extends StatelessWidget {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
+                              const Text(
                                 "Email",
                                 style: TextStyle(
                                   fontFamily: 'Poppins',
@@ -55,14 +54,14 @@ class LoginPage extends StatelessWidget {
                                   fontSize: 16,
                                 ),
                               ),
-                              SizedBox(height: 10),
+                              const SizedBox(height: 10),
                               SizedBox(
                                 height: 40,
                                 child: TextField(
-                                  style: TextStyle(color: Colors.black87),
+                                  style: const TextStyle(color: Colors.black87),
                                   decoration: InputDecoration(
                                     hintText: "example@uniandes.edu.co",
-                                    contentPadding: EdgeInsets.symmetric(
+                                    contentPadding: const EdgeInsets.symmetric(
                                       vertical: 0,
                                       horizontal: 12,
                                     ),
@@ -72,8 +71,8 @@ class LoginPage extends StatelessWidget {
                                   ),
                                 ),
                               ),
-                              SizedBox(height: 15),
-                              Text(
+                              const SizedBox(height: 15),
+                              const Text(
                                 "Contraseña",
                                 style: TextStyle(
                                   fontFamily: 'Poppins',
@@ -82,15 +81,15 @@ class LoginPage extends StatelessWidget {
                                   fontSize: 16,
                                 ),
                               ),
-                              SizedBox(height: 10),
+                              const SizedBox(height: 10),
                               SizedBox(
                                 height: 40,
                                 child: TextField(
-                                  style: TextStyle(color: Colors.black87),
+                                  style: const TextStyle(color: Colors.black87),
                                   obscureText: true,
                                   decoration: InputDecoration(
                                     hintText: "password",
-                                    contentPadding: EdgeInsets.symmetric(
+                                    contentPadding: const EdgeInsets.symmetric(
                                       vertical: 0,
                                       horizontal: 12,
                                     ),
@@ -100,18 +99,25 @@ class LoginPage extends StatelessWidget {
                                   ),
                                 ),
                               ),
-                              SizedBox(height: 15),
+                              const SizedBox(height: 15),
                               SizedBox(
                                 width: double.infinity,
                                 child: ElevatedButton(
                                   style: ElevatedButton.styleFrom(
-                                    backgroundColor: Color(0xFF00296B),
+                                    backgroundColor: const Color(0xFF00296B),
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(6),
                                     ),
                                   ),
-                                  onPressed: () {},
-                                  child: Text(
+                                  onPressed: () {
+                                    // Aquí es donde se va al Home
+                                    Navigator.pushNamedAndRemoveUntil(
+                                      context,
+                                      '/home',
+                                      (route) => false,
+                                    );
+                                  },
+                                  child: const Text(
                                     "Iniciar sesión",
                                     style: TextStyle(
                                       color: Colors.white,
@@ -135,12 +141,15 @@ class LoginPage extends StatelessWidget {
 
           // Botón de retroceso arriba a la izquierda
           Positioned(
-            top: 40, // margen superior (ajústalo según necesites)
-            left: 20, // margen izquierdo
+            top: 40,
+            left: 20,
             child: IconButton(
-              icon: Icon(Icons.arrow_back, color: Colors.white, size: 30),
+              icon: const Icon(Icons.arrow_back, color: Colors.white, size: 30),
               onPressed: () {
-                selectedPageNotifier.value = 4;
+                // Regresa a la pantalla de LoginRegisterPage
+                Navigator.pop(context);
+                // O si quieres asegurarte:
+                // Navigator.pushReplacementNamed(context, '/login_register');
               },
             ),
           ),
