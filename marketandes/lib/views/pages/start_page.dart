@@ -14,7 +14,7 @@ class _StartPageState extends State<StartPage> {
     super.initState();
 
     Future.delayed(const Duration(seconds: 5), () {
-      selectedPageNotifier.value = 0;
+      selectedPageNotifier.value = 3;
     });
   }
 

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:marketandes/data/notifiers.dart';
 import 'package:marketandes/views/pages/add_page.dart';
 import 'package:marketandes/views/pages/home_page.dart';
+import 'package:marketandes/views/pages/login_page.dart';
 import 'package:marketandes/views/pages/start_page.dart';
 import '../widgets/navbar_widget.dart';
 
@@ -14,7 +15,12 @@ class WidgetTree extends StatelessWidget {
   final List<int> pagesWithBars = const [0, 1];
 
   // Tus páginas
-  static final List<Widget> pages = [HomePage(), AddPage(), StartPage()];
+  static final List<Widget> pages = [
+    HomePage(),
+    AddPage(),
+    StartPage(),
+    LoginPage(),
+  ];
 
   @override
   Widget build(BuildContext context) {
