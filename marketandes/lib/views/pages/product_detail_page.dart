@@ -8,7 +8,7 @@ class ProductDetailPage extends StatelessWidget {
 
   const ProductDetailPage({
     super.key,
-    required this.name,
+    required this.name, 
     required this.price,
     this.imagePath,
   });
