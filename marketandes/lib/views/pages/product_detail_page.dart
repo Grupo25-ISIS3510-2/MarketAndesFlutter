@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:marketandes/widgets/navbar_widget.dart';
+import 'package:marketandes/views/pages/rating_form_page.dart';
 
 class ProductDetailPage extends StatelessWidget {
   final String name;
@@ -114,13 +115,16 @@ class ProductDetailPage extends StatelessWidget {
                   Expanded(
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.yellow,
+                        backgroundColor: const Color(0xFFFDC500),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(8),
                         ),
                       ),
                       onPressed: () {
-                        // Acción del botón "Comprar"
+                          Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => RatingFormPage()),
+                        );
                       },
                       child: const Text(
                         "Comprar",
