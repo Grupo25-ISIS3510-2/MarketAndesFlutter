@@ -38,8 +38,15 @@ class ProductDetailPage extends StatelessWidget {
               Center(
                 child: Column(
                   children: [
-                    if (imagePath != null)
-                      Image.asset(imagePath!, height: 200),
+                    if (imagePath != null && imagePath!.isNotEmpty)
+                        Image.network(
+                          imagePath!,
+                          height: 200,
+                          fit: BoxFit.contain,
+                          errorBuilder: (context, error, stackTrace) {
+                            return const Icon(Icons.image_not_supported, size: 100, color: Colors.grey);
+                          },
+                        ),
                     const SizedBox(height: 10),
                     Text(
                       name,
