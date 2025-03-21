@@ -9,6 +9,7 @@ import 'package:marketandes/views/pages/register_page.dart';
 import 'package:marketandes/views/pages/start_page.dart';
 import 'package:marketandes/views/widget_tree.dart';
 import 'firebase_options.dart';
+import 'package:marketandes/views/pages/preferences_page.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -38,6 +39,7 @@ class MyApp extends StatelessWidget {
         '/init': (context) => const LoginRegisterPage(),
         '/home': (context) => const HomeWithNavbar(),
         '/add': (context) => const AddPage(),
+        '/preferences': (context) => const PreferenciasScreen(),
       },
     );
   }
