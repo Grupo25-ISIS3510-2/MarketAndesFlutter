@@ -55,6 +55,8 @@ class AuthService {
         'email': email,
         'fullName': fullName,
         'createdAt': FieldValue.serverTimestamp(),
+        'longitud': -74.065978,
+        'latitud': 4.601295,
       });
 
       return userCredential; // Si todo fue bien, devolvemos el resultado
