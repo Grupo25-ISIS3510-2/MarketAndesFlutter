@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../data/notifiers.dart';
-import 'chat_detail_page.dart'; // ChatConversationPage está aquí
+import 'chat_detail_page.dart';
+import 'map_users.dart'; // ChatConversationPage está aquí
 
 class ChatPage extends StatelessWidget {
   const ChatPage({super.key});
@@ -146,7 +147,18 @@ class ChatPage extends StatelessWidget {
                                           Icons.location_on_outlined,
                                         ),
                                         onPressed: () {
-                                          // Aquí puedes implementar la lógica de ubicación
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder:
+                                                  (
+                                                    context,
+                                                  ) => MapaEncuentroPage(
+                                                    nombreUsuario:
+                                                        nombre, // Aquí se pasa el nombre del usuario
+                                                  ),
+                                            ),
+                                          );
                                         },
                                       ),
                                       IconButton(

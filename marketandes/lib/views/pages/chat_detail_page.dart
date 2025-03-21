@@ -1,5 +1,8 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:proximity_sensor/proximity_sensor.dart';
+import 'package:screen_brightness/screen_brightness.dart';
 import '../../data/notifiers.dart'; // para el currentUserUuid
 
 class ChatConversationPage extends StatefulWidget {
@@ -24,8 +27,59 @@ class _ChatConversationPageState extends State<ChatConversationPage> {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
 
+  bool _proximityMode = false;
+  StreamSubscription<dynamic>? _proximitySubscription;
+  double _previousBrightness = 1.0;
+
+  @override
+  void initState() {
+    super.initState();
+    _initBrightness();
+  }
+
+  Future<void> _initBrightness() async {
+    _previousBrightness = await ScreenBrightness().current;
+  }
+
+  void _toggleProximityMode(bool enabled) {
+    setState(() {
+      _proximityMode = enabled;
+    });
+
+    if (enabled) {
+      _startListeningProximity();
+    } else {
+      _stopListeningProximity();
+      _restoreBrightness();
+    }
+  }
+
+  void _startListeningProximity() {
+    _proximitySubscription = ProximitySensor.events.listen((int event) {
+      if (!_proximityMode) return;
+
+      if (event > 0) {
+        // Algo cerca, apaga pantalla
+        ScreenBrightness().setScreenBrightness(0.0);
+      } else {
+        // Nada cerca, restaura brillo
+        _restoreBrightness();
+      }
+    });
+  }
+
+  void _stopListeningProximity() {
+    _proximitySubscription?.cancel();
+    _proximitySubscription = null;
+  }
+
+  Future<void> _restoreBrightness() async {
+    await ScreenBrightness().setScreenBrightness(_previousBrightness);
+  }
+
   @override
   void dispose() {
+    _stopListeningProximity();
     _messageController.dispose();
     _scrollController.dispose();
     super.dispose();
@@ -55,16 +109,31 @@ class _ChatConversationPageState extends State<ChatConversationPage> {
           const SizedBox(width: 8),
           CircleAvatar(backgroundImage: NetworkImage(widget.userPhotoUrl)),
           const SizedBox(width: 12),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  widget.userName,
+                  style: const TextStyle(fontSize: 16, color: Colors.white),
+                ),
+                Text(
+                  widget.razon,
+                  style: const TextStyle(fontSize: 12, color: Colors.white70),
+                ),
+              ],
+            ),
+          ),
+          Row(
             children: [
-              Text(
-                widget.userName,
-                style: const TextStyle(fontSize: 16, color: Colors.white),
+              Icon(
+                Icons.visibility_off, // Ícono antiespías
+                color: Colors.white,
               ),
-              Text(
-                widget.razon,
-                style: const TextStyle(fontSize: 12, color: Colors.white70),
+              Switch(
+                value: _proximityMode,
+                activeColor: const Color(0xFFFDC500),
+                onChanged: _toggleProximityMode,
               ),
             ],
           ),
@@ -93,7 +162,6 @@ class _ChatConversationPageState extends State<ChatConversationPage> {
 
         final messages = snapshot.data!.docs;
 
-        // Scroll automático al final
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (_scrollController.hasClients) {
             _scrollController.jumpTo(
@@ -155,10 +223,7 @@ class _ChatConversationPageState extends State<ChatConversationPage> {
                       ),
                     ),
                   ),
-                  if (isMine)
-                    const SizedBox(
-                      width: 40,
-                    ), // Para que tenga simetría visual con el avatar del otro lado
+                  if (isMine) const SizedBox(width: 40),
                 ],
               ),
             );
