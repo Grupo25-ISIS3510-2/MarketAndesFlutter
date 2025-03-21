@@ -1,20 +1,75 @@
+import 'dart:convert';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:http/http.dart' as http;
 
-class MapaEncuentroPage extends StatelessWidget {
+class MapaEncuentroPage extends StatefulWidget {
   final String nombreUsuario;
 
   const MapaEncuentroPage({super.key, required this.nombreUsuario});
 
   @override
-  Widget build(BuildContext context) {
-    // Coordenadas aleatorias en Bogotá para pruebas
-    final LatLng miUbicacion = _randomPointEnBogota();
-    final LatLng puntoEncuentro = _randomPointEnBogota();
-    final LatLng ubicacionOtraPersona = _randomPointEnBogota();
+  State<MapaEncuentroPage> createState() => _MapaEncuentroPageState();
+}
 
+class _MapaEncuentroPageState extends State<MapaEncuentroPage> {
+  final LatLng miUbicacion = _randomPointEnBogota();
+  final LatLng puntoEncuentro = _randomPointEnBogota();
+  final LatLng ubicacionOtraPersona = _randomPointEnBogota();
+
+  List<LatLng> rutaMiUbicacion = [];
+  // Puedes agregar más rutas si quieres, pero de momento lo dejamos solo para ti.
+
+  @override
+  void initState() {
+    super.initState();
+    _obtenerRuta();
+  }
+
+  Future<void> _obtenerRuta() async {
+    const apiKey = '5b3ce3597851110001cf624884acf4bb7f4849fda1b0d2d33d9cf0d1';
+    final url = Uri.parse(
+      'https://api.openrouteservice.org/v2/directions/foot-walking/geojson',
+    );
+
+    final body = jsonEncode({
+      "coordinates": [
+        [miUbicacion.longitude, miUbicacion.latitude],
+        [puntoEncuentro.longitude, puntoEncuentro.latitude],
+      ],
+    });
+
+    final headers = {
+      'Authorization': apiKey,
+      'Content-Type': 'application/json',
+    };
+
+    try {
+      final response = await http.post(url, headers: headers, body: body);
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final List<dynamic> coordinates =
+            data['features'][0]['geometry']['coordinates'];
+
+        final List<LatLng> puntosRuta =
+            coordinates.map((coord) => LatLng(coord[1], coord[0])).toList();
+
+        setState(() {
+          rutaMiUbicacion = puntosRuta;
+        });
+      } else {
+        print('Error al obtener la ruta: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Excepción al obtener la ruta: $e');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -24,7 +79,7 @@ class MapaEncuentroPage extends StatelessWidget {
             const Icon(Icons.shopping_cart_outlined, color: Colors.white),
             const SizedBox(width: 8),
             Text(
-              'Encuentro con $nombreUsuario',
+              'Encuentro con ${widget.nombreUsuario}',
               style: const TextStyle(color: Colors.white),
             ),
           ],
@@ -40,7 +95,7 @@ class MapaEncuentroPage extends StatelessWidget {
                 const Icon(Icons.location_on, color: Colors.red),
                 const SizedBox(width: 8),
                 Text(
-                  'Punto de encuentro con $nombreUsuario',
+                  'Punto de encuentro con ${widget.nombreUsuario}',
                   style: const TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 16,
@@ -65,26 +120,23 @@ class MapaEncuentroPage extends StatelessWidget {
                     _crearMarker(miUbicacion, 'Tú', Colors.blue),
                     _crearMarker(
                       ubicacionOtraPersona,
-                      nombreUsuario,
+                      widget.nombreUsuario,
                       Colors.green,
                     ),
                     _crearMarker(puntoEncuentro, 'Encuentro', Colors.red),
                   ],
                 ),
-                PolylineLayer(
-                  polylines: [
-                    Polyline(
-                      points: [miUbicacion, puntoEncuentro],
-                      strokeWidth: 4.0,
-                      color: Colors.blueAccent,
-                    ),
-                    Polyline(
-                      points: [ubicacionOtraPersona, puntoEncuentro],
-                      strokeWidth: 4.0,
-                      color: Colors.green,
-                    ),
-                  ],
-                ),
+                // Ruta real desde mi ubicación al punto de encuentro
+                if (rutaMiUbicacion.isNotEmpty)
+                  PolylineLayer(
+                    polylines: [
+                      Polyline(
+                        points: rutaMiUbicacion,
+                        strokeWidth: 4.0,
+                        color: Colors.blueAccent,
+                      ),
+                    ],
+                  ),
               ],
             ),
           ),
@@ -114,7 +166,7 @@ class MapaEncuentroPage extends StatelessWidget {
     );
   }
 
-  LatLng _randomPointEnBogota() {
+  static LatLng _randomPointEnBogota() {
     final random = Random();
     final lat = 4.6 + random.nextDouble() * 0.2;
     final lng = -74.15 + random.nextDouble() * 0.1;
