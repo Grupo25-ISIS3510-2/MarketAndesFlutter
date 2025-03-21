@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:marketandes/views/pages/chat_page.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:marketandes/views/pages/home_page.dart';
 import 'package:marketandes/views/pages/add_page.dart';
 import 'package:marketandes/views/pages/map_page.dart';
+import 'package:marketandes/views/pages/login_page.dart';
 import 'package:marketandes/widgets/navbar_widget.dart';
 
 class HomeWithNavbar extends StatefulWidget {
@@ -15,12 +16,42 @@ class HomeWithNavbar extends StatefulWidget {
 class _HomeWithNavbarState extends State<HomeWithNavbar> {
   int _selectedIndex = 0;
 
-  final List<Widget> _pages = [HomePage(), AddPage(), ChatPage()];
+  final List<Widget> _pages = [HomePage(), AddPage()];
 
   void _onItemTapped(int index) {
     setState(() {
       _selectedIndex = index;
     });
+  }
+
+  void _showLogoutDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text("Confirmar"),
+          content: const Text("¿Estás seguro de que quieres cerrar sesión?"),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text("Cancelar"),
+            ),
+            TextButton(
+              onPressed: () async {
+                await FirebaseAuth.instance.signOut();
+                if (!mounted) return;
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(builder: (context) => const LoginPage()),
+                  (Route<dynamic> route) => false,
+                );
+              },
+              child: const Text("Cerrar sesión"),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   @override
@@ -37,21 +68,21 @@ class _HomeWithNavbarState extends State<HomeWithNavbar> {
         ),
         centerTitle: true,
       ),
-      drawer: Drawer( // Menú lateral
+      drawer: Drawer(
         child: ListView(
           padding: EdgeInsets.zero,
           children: [
             DrawerHeader(
-              decoration: BoxDecoration(color: Color(0xFF00296B)),
+              decoration: const BoxDecoration(color: Color(0xFF00296B)),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
+                  const Text(
                     "MarketAndes",
                     style: TextStyle(color: Colors.white, fontSize: 24),
                   ),
-                  SizedBox(height: 10),
-                  Text(
+                  const SizedBox(height: 10),
+                  const Text(
                     "Opciones",
                     style: TextStyle(color: Colors.white70, fontSize: 16),
                   ),
@@ -59,14 +90,19 @@ class _HomeWithNavbarState extends State<HomeWithNavbar> {
               ),
             ),
             ListTile(
-              leading: Icon(Icons.map, color: Colors.black),
-              title: Text("Mapa"),
+              leading: const Icon(Icons.map, color: Colors.black),
+              title: const Text("Mapa"),
               onTap: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => MapPage()),
+                  MaterialPageRoute(builder: (context) => const MapPage()),
                 );
               },
+            ),
+            ListTile(
+              leading: const Icon(Icons.logout, color: Colors.red),
+              title: const Text("Cerrar sesión"),
+              onTap: _showLogoutDialog,
             ),
           ],
         ),
