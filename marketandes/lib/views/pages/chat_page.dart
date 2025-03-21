@@ -154,8 +154,9 @@ class ChatPage extends StatelessWidget {
                                                   (
                                                     context,
                                                   ) => MapaEncuentroPage(
-                                                    nombreUsuario:
-                                                        nombre, // Aquí se pasa el nombre del usuario
+                                                    nombreUsuario: nombre,
+                                                    chatId:
+                                                        chatId, // aquí pasas el id del chat
                                                   ),
                                             ),
                                           );
