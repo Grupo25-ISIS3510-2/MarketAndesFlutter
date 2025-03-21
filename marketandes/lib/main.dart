@@ -1,18 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:marketandes/views/pages/add_page.dart';
 import 'package:marketandes/views/pages/home_page.dart';
 import 'package:marketandes/views/pages/login_page.dart';
 import 'package:marketandes/views/pages/login_register.dart';
 import 'package:marketandes/views/pages/register_page.dart';
 import 'package:marketandes/views/pages/start_page.dart';
-import 'package:marketandes/views/widget_tree.dart'; // Nuevo archivo opcional
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_core/firebase_core.dart';
+import 'package:marketandes/views/widget_tree.dart';
 import 'firebase_options.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
   runApp(const MyApp());
 }
 
@@ -35,12 +37,8 @@ class MyApp extends StatelessWidget {
         '/login': (context) => const LoginPage(),
         '/register': (context) => const RegisterPage(),
         '/init': (context) => const LoginRegisterPage(),
-        '/home':
-            (context) =>
-                const HomeWithNavbar(), // Esta es la que tiene el navbar
-        '/add':
-            (context) =>
-                const AddPage(), // Si quieres abrir add_page sin navbar
+        '/home': (context) => const HomeWithNavbar(),
+        '/add': (context) => const AddPage(),
       },
     );
   }
