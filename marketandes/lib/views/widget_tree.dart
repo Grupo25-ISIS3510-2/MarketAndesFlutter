@@ -8,16 +8,24 @@ import 'package:marketandes/views/pages/login_page.dart';
 import 'package:marketandes/widgets/navbar_widget.dart';
 
 class HomeWithNavbar extends StatefulWidget {
-  const HomeWithNavbar({super.key});
+  final int selectedIndex;
+
+  const HomeWithNavbar({super.key, this.selectedIndex = 0});
 
   @override
   State<HomeWithNavbar> createState() => _HomeWithNavbarState();
 }
 
 class _HomeWithNavbarState extends State<HomeWithNavbar> {
-  int _selectedIndex = 0;
+  late int _selectedIndex;
 
   final List<Widget> _pages = [HomePage(), AddPage(), ChatPage()];
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedIndex = widget.selectedIndex; // Si no se pasa, usa 0 por default
+  }
 
   void _onItemTapped(int index) {
     setState(() {
@@ -26,25 +34,30 @@ class _HomeWithNavbarState extends State<HomeWithNavbar> {
   }
 
   void _logout(BuildContext context) async {
-    bool confirmLogout = await showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text("Cerrar sesión"),
-          content: const Text("¿Estás seguro de que deseas cerrar sesión?"),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: const Text("Cancelar"),
-            ),
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(true),
-              child: const Text("Cerrar sesión", style: TextStyle(color: Colors.red)),
-            ),
-          ],
-        );
-      },
-    ) ?? false;
+    bool confirmLogout =
+        await showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              title: const Text("Cerrar sesión"),
+              content: const Text("¿Estás seguro de que deseas cerrar sesión?"),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(false),
+                  child: const Text("Cancelar"),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(true),
+                  child: const Text(
+                    "Cerrar sesión",
+                    style: TextStyle(color: Colors.red),
+                  ),
+                ),
+              ],
+            );
+          },
+        ) ??
+        false;
 
     if (confirmLogout) {
       await FirebaseAuth.instance.signOut();
@@ -110,10 +123,7 @@ class _HomeWithNavbarState extends State<HomeWithNavbar> {
           ],
         ),
       ),
-      body: IndexedStack(
-        index: _selectedIndex,
-        children: _pages,
-      ),
+      body: IndexedStack(index: _selectedIndex, children: _pages),
       bottomNavigationBar: NavbarWidget(
         selectedIndex: _selectedIndex,
         onItemTapped: _onItemTapped,
