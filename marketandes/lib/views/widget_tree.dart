@@ -1,48 +1,45 @@
 import 'package:flutter/material.dart';
-import 'package:marketandes/data/notifiers.dart';
-import 'package:marketandes/views/pages/add_page.dart';
 import 'package:marketandes/views/pages/home_page.dart';
-import 'package:marketandes/views/pages/start_page.dart';
-import '../widgets/navbar_widget.dart';
+import 'package:marketandes/views/pages/add_page.dart';
+import 'package:marketandes/widgets/navbar_widget.dart'; // Importamos el navbar separado
 
-List<Widget> pages = [HomePage(), AddPage(), StartPage()];
+class HomeWithNavbar extends StatefulWidget {
+  const HomeWithNavbar({super.key});
 
-class WidgetTree extends StatelessWidget {
-  const WidgetTree({super.key});
+  @override
+  State<HomeWithNavbar> createState() => _HomeWithNavbarState();
+}
 
-  // Índices donde SÍ hay AppBar y BottomNavBar
-  final List<int> pagesWithBars = const [0, 1];
+class _HomeWithNavbarState extends State<HomeWithNavbar> {
+  int _selectedIndex = 0;
 
-  // Tus páginas
-  static final List<Widget> pages = [HomePage(), AddPage(), StartPage()];
+  final List<Widget> _pages = [HomePage(), AddPage()];
+
+  void _onItemTapped(int index) {
+    setState(() {
+      _selectedIndex = index;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
-    return ValueListenableBuilder<int>(
-      valueListenable: selectedPageNotifier,
-      builder: (context, selectedIndex, _) {
-        bool showBars = pagesWithBars.contains(selectedIndex);
-
-        return Scaffold(
-          appBar:
-              showBars
-                  ? AppBar(
-                    backgroundColor: const Color(0xFF00296B),
-                    title: SizedBox(
-                      height: 60,
-                      child: Image.asset(
-                        "assets/images/MartekAndesAppBar.png",
-                        fit: BoxFit.contain,
-                      ),
-                    ),
-                    centerTitle: true,
-                  )
-                  : null,
-          body: pages[selectedIndex],
-          bottomNavigationBar:
-              showBars ? NavbarWidget(selectedIndex: selectedIndex) : null,
-        );
-      },
+    return Scaffold(
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF00296B),
+        title: SizedBox(
+          height: 60,
+          child: Image.asset(
+            "assets/images/MartekAndesAppBar.png",
+            fit: BoxFit.contain,
+          ),
+        ),
+        centerTitle: true,
+      ),
+      body: _pages[_selectedIndex],
+      bottomNavigationBar: NavbarWidget(
+        selectedIndex: _selectedIndex,
+        onItemTapped: _onItemTapped,
+      ),
     );
   }
 }
