@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 // Tus notifiers vienen de otro archivo que defines tú
-import '../../data/notifiers.dart'; // Aquí está el currentUserUuid que ya definiste
+import '../../data/notifiers.dart';
+import 'chat_detail_page.dart'; // Aquí está el currentUserUuid que ya definiste
 
 class ChatPage extends StatelessWidget {
   const ChatPage({super.key});
@@ -121,7 +122,19 @@ class ChatPage extends StatelessWidget {
                                     color: Colors.black,
                                     icon: const Icon(Icons.chat_bubble_outline),
                                     onPressed: () {
-                                      // Lógica futura para abrir el chat
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder:
+                                              (context) => ChatConversationPage(
+                                                userName:
+                                                    nombre, // el que traes de Firebase
+                                                userPhotoUrl:
+                                                    'https://randomuser.me/api/portraits/men/1.jpg', // o la que traigas
+                                                razon: razon,
+                                              ),
+                                        ),
+                                      );
                                     },
                                   ),
                                 ],
@@ -138,22 +151,6 @@ class ChatPage extends StatelessWidget {
           ),
         );
       },
-    );
-  }
-}
-
-class ChatConversationPage extends StatelessWidget {
-  const ChatConversationPage({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Chat'), // Luego dinámico
-      ),
-      body: const Center(
-        child: Text('Aquí va el chat...', style: TextStyle(fontSize: 18)),
-      ),
     );
   }
 }

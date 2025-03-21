@@ -47,6 +47,7 @@ class AuthService {
 
       // Actualizar el displayName en FirebaseAuth
       await user.updateDisplayName(fullName);
+      currentUserUuid.value = user.uid;
 
       // Guardar info adicional en Firestore
       await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
