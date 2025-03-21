@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:marketandes/auth/auth_service.dart';
+import 'preferences_page.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -55,7 +56,11 @@ class _RegisterPageState extends State<RegisterPage> {
       );
 
       // Si llega aquí, el usuario inició sesión correctamente
-      Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
+      Navigator.pushNamedAndRemoveUntil(
+        context,
+        '/preferences',
+        (route) => false,
+      );
     } on FirebaseAuthException catch (e) {
       // Manejo detallado de errores específicos de FirebaseAuth
       debugPrint(
