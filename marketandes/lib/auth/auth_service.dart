@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import '../data/notifiers.dart';
 
 ValueNotifier<AuthService> authService = ValueNotifier(AuthService());
 
@@ -13,10 +14,14 @@ class AuthService {
     required String email,
     required String password,
   }) async {
-    return await firebaseAuth.signInWithEmailAndPassword(
+    final credential = await firebaseAuth.signInWithEmailAndPassword(
       email: email,
       password: password,
     );
+
+    currentUserUuid.value = credential.user?.uid ?? "";
+
+    return credential;
   }
 
   Future<UserCredential> createAccount({
@@ -42,6 +47,7 @@ class AuthService {
 
       // Actualizar el displayName en FirebaseAuth
       await user.updateDisplayName(fullName);
+      currentUserUuid.value = user.uid;
 
       // Guardar info adicional en Firestore
       await FirebaseFirestore.instance.collection('users').doc(user.uid).set({

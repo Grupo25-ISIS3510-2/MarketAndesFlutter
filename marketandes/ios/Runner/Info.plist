@@ -45,5 +45,7 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Necesitamos acceder al micrófono para grabar mensajes de voz.</string>
 </dict>
 </plist>

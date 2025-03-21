@@ -258,7 +258,7 @@ class _RegisterPageState extends State<RegisterPage> {
                                             color: Colors.white,
                                           )
                                           : const Text(
-                                            "Iniciar sesión",
+                                            "Registrarte",
                                             style: TextStyle(
                                               color: Colors.white,
                                               fontFamily: 'Poppins',

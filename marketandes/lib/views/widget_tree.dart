@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:marketandes/views/pages/chat_page.dart';
 import 'package:marketandes/views/pages/home_page.dart';
 import 'package:marketandes/views/pages/add_page.dart';
 import 'package:marketandes/views/pages/map_page.dart';
@@ -14,7 +15,7 @@ class HomeWithNavbar extends StatefulWidget {
 class _HomeWithNavbarState extends State<HomeWithNavbar> {
   int _selectedIndex = 0;
 
-  final List<Widget> _pages = [HomePage(), AddPage()];
+  final List<Widget> _pages = [HomePage(), AddPage(), ChatPage()];
 
   void _onItemTapped(int index) {
     setState(() {
