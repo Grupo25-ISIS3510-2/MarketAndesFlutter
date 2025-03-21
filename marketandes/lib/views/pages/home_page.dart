@@ -1,37 +1,48 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:marketandes/views/pages/product_detail_page.dart';
 
 class Product {
   final String name;
   final int price;
   final String? imagePath;
+  final String description;
+  final String sellerID;
+  final int sellerRating;
 
   Product({
     required this.name,
     required this.price,
     this.imagePath,
+    required this.description,
+    required this.sellerID,
+    required this.sellerRating,
   });
+
+  factory Product.fromFirestore(DocumentSnapshot doc) {
+    final data = doc.data() as Map<String, dynamic>;
+    return Product(
+      name: data['name'],
+      price: data['price'],
+      imagePath: data['imageURL'],
+      description: data['description'] ?? 'Sin descripción',
+      sellerID: data['sellerID'] ?? 'Vendedor desconocido',
+      sellerRating: data['sellerRating'] ?? 0,
+    );
+  }
 }
+
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
 
+  Future<List<Product>> fetchProducts(String category) async {
+    final snapshot = await FirebaseFirestore.instance.collection('products').get();
+    return snapshot.docs.map((doc) => Product.fromFirestore(doc)).toList();
+  }
+
   @override
   Widget build(BuildContext context) {
-    final List<Product> recentlyViewed = [
-      Product(name: "Calculadora Ti Nspire", price: 400000, imagePath: "assets/images/calculadora.png"),
-      Product(name: "Libro Cálculo Stewart", price: 50000, imagePath: "assets/images/calculo.jpg"),
-    ];
-
-    final List<Product> recommended = [
-      Product(name: "Bata de laboratorio", price: 60000, imagePath: "assets/images/bata.png"),
-      Product(name: "Libro Electromagnetismo", price: 40000, imagePath: "assets/images/libroelectro.jpg"),
-      Product(name: "Computador Portátil Lenovo", price: 2500000, imagePath: "assets/images/pc.png"),
-      Product(name: "Libro Cálculo Stewart", price: 50000, imagePath: "assets/images/calculo.jpg"),
-      Product(name: "Libreta en cuero", price: 20000, imagePath: "assets/images/libreta.png"),
-      Product(name: "Calculadora", price: 60000, imagePath: "assets/images/calculadora.png"),
-    ];
-
     return Scaffold(
       backgroundColor: const Color(0xFFD8D8D8),
       body: SingleChildScrollView(
@@ -47,7 +58,18 @@ class HomePage extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 10),
-              _buildProductGrid(recentlyViewed, context),
+              FutureBuilder<List<Product>>(
+                future: fetchProducts('recentlyViewed'),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const CircularProgressIndicator();
+                  } else if (snapshot.hasError) {
+                    return Text('Error: ${snapshot.error}');
+                  } else {
+                    return _buildProductGrid(snapshot.data ?? [], context);
+                  }
+                },
+              ),
               const SizedBox(height: 20),
               const Center(
                 child: Text(
@@ -56,7 +78,18 @@ class HomePage extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 10),
-              _buildProductGrid(recommended, context),
+              FutureBuilder<List<Product>>(
+                future: fetchProducts('recommended'),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const CircularProgressIndicator();
+                  } else if (snapshot.hasError) {
+                    return Text('Error: ${snapshot.error}');
+                  } else {
+                    return _buildProductGrid(snapshot.data ?? [], context);
+                  }
+                },
+              ),
             ],
           ),
         ),
@@ -81,7 +114,7 @@ class HomePage extends StatelessWidget {
     );
   }
 
-Widget _buildProductCard(BuildContext context, Product product) {
+  Widget _buildProductCard(BuildContext context, Product product) {
   return GestureDetector(
     onTap: () {
       Navigator.push(
@@ -91,6 +124,9 @@ Widget _buildProductCard(BuildContext context, Product product) {
             name: product.name,
             price: product.price,
             imagePath: product.imagePath,
+            description: product.description,
+            sellerID: product.sellerID,
+            sellerRating: product.sellerRating,
           ),
         ),
       );
@@ -114,7 +150,7 @@ Widget _buildProductCard(BuildContext context, Product product) {
             child: Padding(
               padding: const EdgeInsets.all(8.0),
               child: product.imagePath != null && product.imagePath!.isNotEmpty
-                  ? Image.asset(
+                  ? Image.network(
                       product.imagePath!,
                       fit: BoxFit.contain,
                       errorBuilder: (context, error, stackTrace) {
@@ -129,7 +165,12 @@ Widget _buildProductCard(BuildContext context, Product product) {
             child: Text(
               product.name,
               textAlign: TextAlign.center,
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.black, fontFamily: 'Poppins'),
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+                color: Colors.black,
+                fontFamily: 'Poppins',
+              ),
             ),
           ),
           const SizedBox(height: 8),
@@ -146,7 +187,12 @@ Widget _buildProductCard(BuildContext context, Product product) {
             child: Center(
               child: Text(
                 "\$ ${product.price}",
-                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16, fontFamily: 'Poppins'),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                  fontFamily: 'Poppins',
+                ),
               ),
             ),
           ),

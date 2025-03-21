@@ -1,10 +1,10 @@
 buildscript {
     repositories {
-        google()            // 👈 Necesario para obtener los plugins de Google
+        google()            
         mavenCentral()
     }
     dependencies {
-        // 👇 Este classpath habilita la integración de Firebase en el build
+        
         classpath("com.google.gms:google-services:4.3.15")
     }
 }
