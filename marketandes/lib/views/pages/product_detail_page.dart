@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:marketandes/widgets/navbar_widget.dart';
 import 'package:marketandes/views/pages/rating_form_page.dart';
+import '../../data/notifiers.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'chat_page.dart';
+import '../widget_tree.dart';
 
 class ProductDetailPage extends StatelessWidget {
   final String name;
@@ -9,6 +13,7 @@ class ProductDetailPage extends StatelessWidget {
   final String description;
   final String sellerID;
   final int sellerRating;
+  final String sellerUUID;
 
   const ProductDetailPage({
     super.key,
@@ -18,6 +23,7 @@ class ProductDetailPage extends StatelessWidget {
     required this.description,
     required this.sellerID,
     required this.sellerRating,
+    required this.sellerUUID,
   });
 
   @override
@@ -46,7 +52,11 @@ class ProductDetailPage extends StatelessWidget {
                 child: Column(
                   children: [
                     if (imagePath != null)
-                      Image.network(imagePath!, height: 200, fit: BoxFit.contain),
+                      Image.network(
+                        imagePath!,
+                        height: 200,
+                        fit: BoxFit.contain,
+                      ),
                     const SizedBox(height: 10),
                     Text(
                       name,
@@ -84,7 +94,11 @@ class ProductDetailPage extends StatelessWidget {
               const SizedBox(height: 20),
               Row(
                 children: [
-                  const Icon(Icons.account_circle, size: 24, color: Colors.black),
+                  const Icon(
+                    Icons.account_circle,
+                    size: 24,
+                    color: Colors.black,
+                  ),
                   const SizedBox(width: 8),
                   Text(
                     sellerID,
@@ -100,7 +114,8 @@ class ProductDetailPage extends StatelessWidget {
               Row(
                 children: List.generate(
                   sellerRating,
-                  (index) => const Icon(Icons.star, color: Colors.amber, size: 20),
+                  (index) =>
+                      const Icon(Icons.star, color: Colors.amber, size: 20),
                 ),
               ),
               const SizedBox(height: 20),
@@ -121,9 +136,11 @@ class ProductDetailPage extends StatelessWidget {
                         ),
                       ),
                       onPressed: () {
-                          Navigator.push(
+                        Navigator.push(
                           context,
-                          MaterialPageRoute(builder: (context) => RatingFormPage()),
+                          MaterialPageRoute(
+                            builder: (context) => RatingFormPage(),
+                          ),
                         );
                       },
                       child: const Text(
@@ -141,8 +158,52 @@ class ProductDetailPage extends StatelessWidget {
                           borderRadius: BorderRadius.circular(8),
                         ),
                       ),
-                      onPressed: () {
-                        // Acción del botón "Contactar Vendedor"
+                      onPressed: () async {
+                        final String compradorUid = currentUserUuid.value;
+                        final String vendedorUid = sellerID;
+
+                        if (compradorUid.isEmpty) {
+                          print('UID del comprador no disponible');
+                          return;
+                        }
+
+                        try {
+                          // Referencias a los documentos de los usuarios
+                          final compradorRef = FirebaseFirestore.instance
+                              .collection('users')
+                              .doc(compradorUid);
+                          final vendedorRef = FirebaseFirestore.instance
+                              .collection('users')
+                              .doc(sellerUUID);
+
+                          // Crear el documento del chat
+                          await FirebaseFirestore.instance
+                              .collection('chatsFlutter')
+                              .add({
+                                'Razon': 'Comprador $name',
+                                'RazonUser': 'Vendedor $name',
+                                'latitud': 0,
+                                'longitud': 0,
+                                'latitudPuntoEncuentro': 0,
+                                'longitudPuntoEncuentro': 0,
+                                'uuidUser': compradorRef, // comprador
+                                'uuidOwner': vendedorRef, // vendedor
+                              });
+
+                          print('Chat creado exitosamente');
+                          Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(
+                              builder:
+                                  (context) =>
+                                      const HomeWithNavbar(selectedIndex: 2),
+                            ),
+                          );
+
+                          // Aquí podrías hacer un Navigator.push para abrir el chat si quieres
+                        } catch (error) {
+                          print('Error al crear el chat: $error');
+                        }
                       },
                       child: const Text(
                         "Contactar Vendedor",

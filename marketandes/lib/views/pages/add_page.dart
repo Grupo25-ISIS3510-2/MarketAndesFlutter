@@ -21,10 +21,26 @@ class _AddPageState extends State<AddPage> {
   String? selectedCategory;
 
   final List<String> categories = [
-    "Arte", "Física", "Utensilios", "Diseño", "Lenguas", "Ingeniería",
-    "Libros", "Medicina", "Tecnología", "Administración", "Software",
-    "Música", "Arquitectura", "Psicología", "Educación", "Química",
-    "Economía", "Comunicación", "Derecho", "Inglés"
+    "Arte",
+    "Física",
+    "Utensilios",
+    "Diseño",
+    "Lenguas",
+    "Ingeniería",
+    "Libros",
+    "Medicina",
+    "Tecnología",
+    "Administración",
+    "Software",
+    "Música",
+    "Arquitectura",
+    "Psicología",
+    "Educación",
+    "Química",
+    "Economía",
+    "Comunicación",
+    "Derecho",
+    "Inglés",
   ];
 
   void _submitProduct() async {
@@ -53,10 +69,13 @@ class _AddPageState extends State<AddPage> {
 
     try {
       final uid = currentUserUuid.value;
-      final userDoc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
+      final userDoc =
+          await FirebaseFirestore.instance.collection('users').doc(uid).get();
       final fullName = userDoc.data()?['fullName'] ?? "Vendedor Desconocido";
 
-      final productsCollection = FirebaseFirestore.instance.collection('products');
+      final productsCollection = FirebaseFirestore.instance.collection(
+        'products',
+      );
       final productData = {
         'name': titleController.text.trim(),
         'description': descriptionController.text.trim(),
@@ -65,6 +84,7 @@ class _AddPageState extends State<AddPage> {
         'category': selectedCategory,
         'sellerID': fullName,
         'sellerRating': 5,
+        'uidSeller': uid,
         'timestamp': FieldValue.serverTimestamp(),
       };
 
@@ -122,15 +142,27 @@ class _AddPageState extends State<AddPage> {
 
             const SizedBox(height: 20),
             _buildLabel("Adjunta el URL de las imágenes del producto"),
-            _buildTextField(imageUrlController, "Pega aquí el enlace de la imagen"),
+            _buildTextField(
+              imageUrlController,
+              "Pega aquí el enlace de la imagen",
+            ),
 
             const SizedBox(height: 20),
             _buildLabel("Descripción corta del producto"),
-            _buildTextField(descriptionController, "Escribe aquí la descripción...", maxLines: 5),
+            _buildTextField(
+              descriptionController,
+              "Escribe aquí la descripción...",
+              maxLines: 5,
+            ),
 
             const SizedBox(height: 20),
             _buildLabel("Precio del producto"),
-            _buildTextField(priceController, "Ingresa el precio", keyboardType: TextInputType.number, prefixText: "\$ "),
+            _buildTextField(
+              priceController,
+              "Ingresa el precio",
+              keyboardType: TextInputType.number,
+              prefixText: "\$ ",
+            ),
 
             const SizedBox(height: 20),
             _buildLabel("Categoría del producto"),
@@ -145,12 +177,13 @@ class _AddPageState extends State<AddPage> {
                 value: selectedCategory,
                 hint: const Text("Selecciona una categoría"),
                 decoration: const InputDecoration(border: InputBorder.none),
-                items: categories.map((String category) {
-                  return DropdownMenuItem<String>(
-                    value: category,
-                    child: Text(category),
-                  );
-                }).toList(),
+                items:
+                    categories.map((String category) {
+                      return DropdownMenuItem<String>(
+                        value: category,
+                        child: Text(category),
+                      );
+                    }).toList(),
                 onChanged: (String? value) {
                   setState(() {
                     selectedCategory = value;
@@ -166,16 +199,25 @@ class _AddPageState extends State<AddPage> {
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFFFDC500),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                       padding: const EdgeInsets.symmetric(vertical: 14),
                     ),
                     onPressed: _isSubmitting ? null : _submitProduct,
-                    child: _isSubmitting
-                        ? const CircularProgressIndicator(color: Colors.black)
-                        : const Text(
-                            "Publicar",
-                            style: TextStyle(color: Colors.black, fontSize: 18, fontWeight: FontWeight.bold),
-                          ),
+                    child:
+                        _isSubmitting
+                            ? const CircularProgressIndicator(
+                              color: Colors.black,
+                            )
+                            : const Text(
+                              "Publicar",
+                              style: TextStyle(
+                                color: Colors.black,
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                   ),
                 ),
                 const SizedBox(width: 20),
@@ -183,13 +225,19 @@ class _AddPageState extends State<AddPage> {
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF00296B),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                       padding: const EdgeInsets.symmetric(vertical: 14),
                     ),
                     onPressed: _navigateToHome,
                     child: const Text(
                       "Cancelar",
-                      style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                 ),
@@ -202,8 +250,13 @@ class _AddPageState extends State<AddPage> {
     );
   }
 
-  Widget _buildTextField(TextEditingController controller, String hintText,
-      {TextInputType keyboardType = TextInputType.text, String prefixText = "", int maxLines = 1}) {
+  Widget _buildTextField(
+    TextEditingController controller,
+    String hintText, {
+    TextInputType keyboardType = TextInputType.text,
+    String prefixText = "",
+    int maxLines = 1,
+  }) {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -227,7 +280,11 @@ class _AddPageState extends State<AddPage> {
   Widget _buildLabel(String text) {
     return Text(
       text,
-      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color.fromARGB(255, 65, 64, 64)),
+      style: const TextStyle(
+        fontSize: 16,
+        fontWeight: FontWeight.bold,
+        color: Color.fromARGB(255, 65, 64, 64),
+      ),
     );
   }
 }
