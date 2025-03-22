@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:marketandes/auth/auth_service.dart';
+import 'package:marketandes/data/session_timer.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -16,7 +17,6 @@ class _LoginPageState extends State<LoginPage> {
   String? errorMessage;
   bool isLoading = false;
 
-  // Esta es la función que se llama al darle al botón de "Iniciar sesión"
   Future<void> _login() async {
     setState(() {
       isLoading = true;
@@ -36,10 +36,10 @@ class _LoginPageState extends State<LoginPage> {
 
       await authService.value.signIn(email: email, password: password);
 
-      // Si llega aquí, el usuario inició sesión correctamente
+      sessionStartTime = DateTime.now(); // <-- Línea añadida
+
       Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
     } on FirebaseAuthException catch (e) {
-      // Manejo detallado de errores específicos de FirebaseAuth
       debugPrint(
         'FirebaseAuthException -> code: ${e.code}, message: ${e.message}',
       );
@@ -47,7 +47,6 @@ class _LoginPageState extends State<LoginPage> {
         errorMessage = _firebaseErrorToMessage(e);
       });
     } catch (e) {
-      // Cualquier otro error inesperado
       debugPrint('Unexpected error: $e');
       setState(() {
         errorMessage = 'Ocurrió un error inesperado. Inténtalo de nuevo.';
@@ -200,20 +199,19 @@ class _LoginPageState extends State<LoginPage> {
                                     ),
                                   ),
                                   onPressed: isLoading ? null : _login,
-                                  child:
-                                      isLoading
-                                          ? const CircularProgressIndicator(
+                                  child: isLoading
+                                      ? const CircularProgressIndicator(
+                                          color: Colors.white,
+                                        )
+                                      : const Text(
+                                          "Iniciar sesión",
+                                          style: TextStyle(
                                             color: Colors.white,
-                                          )
-                                          : const Text(
-                                            "Iniciar sesión",
-                                            style: TextStyle(
-                                              color: Colors.white,
-                                              fontFamily: 'Poppins',
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 15,
-                                            ),
+                                            fontFamily: 'Poppins',
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 15,
                                           ),
+                                        ),
                                 ),
                               ),
                             ],
@@ -226,8 +224,6 @@ class _LoginPageState extends State<LoginPage> {
               ),
             ),
           ),
-
-          // Botón de retroceso
           Positioned(
             top: 40,
             left: 20,
