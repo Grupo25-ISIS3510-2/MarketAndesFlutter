@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:marketandes/widgets/navbar_widget.dart';
 import 'package:marketandes/views/pages/rating_form_page.dart';
+import 'package:marketandes/data/session_timer.dart';
 
 class ProductDetailPage extends StatelessWidget {
   final String name;
@@ -19,6 +22,24 @@ class ProductDetailPage extends StatelessWidget {
     required this.sellerID,
     required this.sellerRating,
   });
+
+  Future<void> _handleInteractionAndLogTime() async {
+    if (sessionStartTime == null) return;
+
+    final now = DateTime.now();
+    final duration = now.difference(sessionStartTime!);
+
+    if (duration.inMinutes < 5) {
+      final uid = FirebaseAuth.instance.currentUser?.uid;
+      if (uid != null) {
+        await FirebaseFirestore.instance.collection('purchaseTime').add({
+          'uid': uid,
+          'elapsedTime': duration.inSeconds,
+          'timestamp': FieldValue.serverTimestamp(),
+        });
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -120,8 +141,9 @@ class ProductDetailPage extends StatelessWidget {
                           borderRadius: BorderRadius.circular(8),
                         ),
                       ),
-                      onPressed: () {
-                          Navigator.push(
+                      onPressed: () async {
+                        await _handleInteractionAndLogTime();
+                        Navigator.push(
                           context,
                           MaterialPageRoute(builder: (context) => RatingFormPage()),
                         );
@@ -141,8 +163,9 @@ class ProductDetailPage extends StatelessWidget {
                           borderRadius: BorderRadius.circular(8),
                         ),
                       ),
-                      onPressed: () {
-                        // Acción del botón "Contactar Vendedor"
+                      onPressed: () async {
+                        await _handleInteractionAndLogTime();
+                        // Aquí puedes agregar la lógica de contacto
                       },
                       child: const Text(
                         "Contactar Vendedor",
