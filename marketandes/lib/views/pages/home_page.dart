@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:marketandes/views/pages/product_detail_page.dart';
 
 class Product {
@@ -10,6 +11,7 @@ class Product {
   final String sellerID;
   final String uidSeller;
   final int sellerRating;
+  final String category;
 
   Product({
     required this.name,
@@ -19,6 +21,7 @@ class Product {
     required this.sellerID,
     required this.sellerRating,
     required this.uidSeller,
+    required this.category,
   });
 
   factory Product.fromFirestore(DocumentSnapshot doc) {
@@ -31,17 +34,58 @@ class Product {
       sellerID: data['sellerID'] ?? 'Vendedor desconocido',
       uidSeller: data['uidSeller'] ?? 'Vendedor desconocido',
       sellerRating: data['sellerRating'] ?? 0,
+      category: data['category'] ?? 'General',
     );
   }
 }
 
-class HomePage extends StatelessWidget {
+class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
-  Future<List<Product>> fetchProducts(String category) async {
-    final snapshot =
-        await FirebaseFirestore.instance.collection('products').get();
-    return snapshot.docs.map((doc) => Product.fromFirestore(doc)).toList();
+  @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  List<String> userPreferences = [];
+
+  @override
+  void initState() {
+    super.initState();
+    fetchUserPreferences();
+  }
+
+  Future<void> fetchUserPreferences() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      final doc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+      if (doc.exists) {
+        final data = doc.data();
+        if (data != null && data['preferencias'] is List) {
+          setState(() {
+            userPreferences = List<String>.from(data['preferencias']);
+          });
+        }
+      }
+    }
+  }
+
+  Future<List<Product>> fetchRecommendedProducts() async {
+    final snapshot = await FirebaseFirestore.instance.collection('products').get();
+    List<Product> allProducts = snapshot.docs.map((doc) => Product.fromFirestore(doc)).toList();
+    
+    List<Product> recommendedProducts = allProducts
+        .where((product) => userPreferences.contains(product.category))
+        .take(4)
+        .toList();
+    
+    return recommendedProducts;
+  }
+
+  Future<List<Product>> fetchAllProducts() async {
+    final snapshot = await FirebaseFirestore.instance.collection('products').get();
+    List<Product> allProducts = snapshot.docs.map((doc) => Product.fromFirestore(doc)).toList();
+    return allProducts;
   }
 
   @override
@@ -56,7 +100,7 @@ class HomePage extends StatelessWidget {
             children: [
               const Center(
                 child: Text(
-                  "Visto recientemente",
+                  "Recomendados",
                   style: TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.bold,
@@ -67,7 +111,7 @@ class HomePage extends StatelessWidget {
               ),
               const SizedBox(height: 10),
               FutureBuilder<List<Product>>(
-                future: fetchProducts('recentlyViewed'),
+                future: fetchRecommendedProducts(),
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return const CircularProgressIndicator();
@@ -81,7 +125,7 @@ class HomePage extends StatelessWidget {
               const SizedBox(height: 20),
               const Center(
                 child: Text(
-                  "Recomendados",
+                  "Explorar Todos los Productos",
                   style: TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.bold,
@@ -92,14 +136,16 @@ class HomePage extends StatelessWidget {
               ),
               const SizedBox(height: 10),
               FutureBuilder<List<Product>>(
-                future: fetchProducts('recommended'),
+                future: fetchAllProducts(),
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return const CircularProgressIndicator();
                   } else if (snapshot.hasError) {
                     return Text('Error: ${snapshot.error}');
                   } else {
-                    return _buildProductGrid(snapshot.data ?? [], context);
+                    List<Product> allProducts = snapshot.data ?? [];
+                    allProducts.removeWhere((product) => userPreferences.contains(product.category));
+                    return _buildProductGrid(allProducts, context);
                   }
                 },
               ),
@@ -109,6 +155,7 @@ class HomePage extends StatelessWidget {
       ),
     );
   }
+
 
   Widget _buildProductGrid(List<Product> products, BuildContext context) {
     return GridView.builder(
@@ -127,7 +174,7 @@ class HomePage extends StatelessWidget {
     );
   }
 
-  Widget _buildProductCard(BuildContext context, Product product) {
+Widget _buildProductCard(BuildContext context, Product product) {
     return GestureDetector(
       onTap: () {
         Navigator.push(
@@ -224,5 +271,6 @@ class HomePage extends StatelessWidget {
         ),
       ),
     );
-  }
+  
+}
 }
