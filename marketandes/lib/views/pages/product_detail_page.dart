@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:marketandes/models/product_model.dart';
-import 'package:marketandes/widgets/navbar_widget.dart';
+import 'package:marketandes/views/widgets/navbar_widget.dart';
 import 'package:marketandes/views/pages/rating_form_page.dart';
 import 'package:marketandes/controllers/product_detail_controller.dart';
 import 'package:marketandes/views/pages/chat_page.dart';
