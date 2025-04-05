@@ -1,0 +1,59 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../data/notifiers.dart';
+import '../data/session_timer.dart';
+
+class ProductDetailController {
+  Future<void> logInteractionIfShortSession() async {
+    if (sessionStartTime == null) return;
+
+    final now = DateTime.now();
+    final duration = now.difference(sessionStartTime!);
+
+    if (duration.inMinutes < 5) {
+      final uid = FirebaseAuth.instance.currentUser?.uid;
+      if (uid != null) {
+        await FirebaseFirestore.instance.collection('purchaseTime').add({
+          'uid': uid,
+          'elapsedTime': duration.inSeconds,
+          'timestamp': FieldValue.serverTimestamp(),
+        });
+      }
+    }
+  }
+
+  Future<void> createChat({
+    required String name,
+    required String sellerID,
+    required String sellerUUID,
+  }) async {
+    final String compradorUid = currentUserUuid.value;
+
+    if (compradorUid.isEmpty) {
+      print('UID del comprador no disponible');
+      return;
+    }
+
+    try {
+      final compradorRef =
+          FirebaseFirestore.instance.collection('users').doc(compradorUid);
+      final vendedorRef =
+          FirebaseFirestore.instance.collection('users').doc(sellerUUID);
+
+      await FirebaseFirestore.instance.collection('chatsFlutter').add({
+        'Razon': 'Comprador $name',
+        'RazonUser': 'Vendedor $name',
+        'latitud': 0,
+        'longitud': 0,
+        'latitudPuntoEncuentro': 0,
+        'longitudPuntoEncuentro': 0,
+        'uuidUser': compradorRef,
+        'uuidOwner': vendedorRef,
+      });
+
+      print('Chat creado exitosamente');
+    } catch (error) {
+      print('Error al crear el chat: $error');
+    }
+  }
+}

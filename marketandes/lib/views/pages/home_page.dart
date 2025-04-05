@@ -110,16 +110,9 @@ class _HomePageState extends State<HomePage> {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (_) => ProductDetailPage(
-              name: product.name,
-              price: product.price,
-              imagePath: product.imagePath,
-              description: product.description,
-              sellerID: product.sellerID,
-              sellerUUID: product.uidSeller,
-              sellerRating: product.sellerRating,
-            ),
-          ),
+          builder: (_) => ProductDetailPage(product: product),
+        ),
+
         );
       },
       child: Container(
