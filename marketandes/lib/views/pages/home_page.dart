@@ -1,43 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:marketandes/models/product_model.dart';
+import 'package:marketandes/controllers/product_controller.dart';
 import 'package:marketandes/views/pages/product_detail_page.dart';
-
-class Product {
-  final String name;
-  final int price;
-  final String? imagePath;
-  final String description;
-  final String sellerID;
-  final String uidSeller;
-  final int sellerRating;
-  final String category;
-
-  Product({
-    required this.name,
-    required this.price,
-    this.imagePath,
-    required this.description,
-    required this.sellerID,
-    required this.sellerRating,
-    required this.uidSeller,
-    required this.category,
-  });
-
-  factory Product.fromFirestore(DocumentSnapshot doc) {
-    final data = doc.data() as Map<String, dynamic>;
-    return Product(
-      name: data['name'],
-      price: data['price'],
-      imagePath: data['imageURL'],
-      description: data['description'] ?? 'Sin descripción',
-      sellerID: data['sellerID'] ?? 'Vendedor desconocido',
-      uidSeller: data['uidSeller'] ?? 'Vendedor desconocido',
-      sellerRating: data['sellerRating'] ?? 0,
-      category: data['category'] ?? 'General',
-    );
-  }
-}
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -47,45 +11,14 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  List<String> userPreferences = [];
+  final ProductController _controller = ProductController();
 
   @override
   void initState() {
     super.initState();
-    fetchUserPreferences();
-  }
-
-  Future<void> fetchUserPreferences() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user != null) {
-      final doc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
-      if (doc.exists) {
-        final data = doc.data();
-        if (data != null && data['preferencias'] is List) {
-          setState(() {
-            userPreferences = List<String>.from(data['preferencias']);
-          });
-        }
-      }
-    }
-  }
-
-  Future<List<Product>> fetchRecommendedProducts() async {
-    final snapshot = await FirebaseFirestore.instance.collection('products').get();
-    List<Product> allProducts = snapshot.docs.map((doc) => Product.fromFirestore(doc)).toList();
-    
-    List<Product> recommendedProducts = allProducts
-        .where((product) => userPreferences.contains(product.category))
-        .take(4)
-        .toList();
-    
-    return recommendedProducts;
-  }
-
-  Future<List<Product>> fetchAllProducts() async {
-    final snapshot = await FirebaseFirestore.instance.collection('products').get();
-    List<Product> allProducts = snapshot.docs.map((doc) => Product.fromFirestore(doc)).toList();
-    return allProducts;
+    _controller.fetchUserPreferences().then((_) {
+      setState(() {});
+    });
   }
 
   @override
@@ -111,14 +44,14 @@ class _HomePageState extends State<HomePage> {
               ),
               const SizedBox(height: 10),
               FutureBuilder<List<Product>>(
-                future: fetchRecommendedProducts(),
+                future: _controller.fetchRecommendedProducts(),
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return const CircularProgressIndicator();
                   } else if (snapshot.hasError) {
                     return Text('Error: ${snapshot.error}');
                   } else {
-                    return _buildProductGrid(snapshot.data ?? [], context);
+                    return _buildProductGrid(snapshot.data ?? []);
                   }
                 },
               ),
@@ -136,16 +69,14 @@ class _HomePageState extends State<HomePage> {
               ),
               const SizedBox(height: 10),
               FutureBuilder<List<Product>>(
-                future: fetchAllProducts(),
+                future: _controller.fetchAllProducts(),
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return const CircularProgressIndicator();
                   } else if (snapshot.hasError) {
                     return Text('Error: ${snapshot.error}');
                   } else {
-                    List<Product> allProducts = snapshot.data ?? [];
-                    allProducts.removeWhere((product) => userPreferences.contains(product.category));
-                    return _buildProductGrid(allProducts, context);
+                    return _buildProductGrid(snapshot.data ?? []);
                   }
                 },
               ),
@@ -156,8 +87,7 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-
-  Widget _buildProductGrid(List<Product> products, BuildContext context) {
+  Widget _buildProductGrid(List<Product> products) {
     return GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
@@ -169,27 +99,26 @@ class _HomePageState extends State<HomePage> {
       ),
       itemCount: products.length,
       itemBuilder: (context, index) {
-        return _buildProductCard(context, products[index]);
+        return _buildProductCard(products[index]);
       },
     );
   }
 
-Widget _buildProductCard(BuildContext context, Product product) {
+  Widget _buildProductCard(Product product) {
     return GestureDetector(
       onTap: () {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder:
-                (context) => ProductDetailPage(
-                  name: product.name,
-                  price: product.price,
-                  imagePath: product.imagePath,
-                  description: product.description,
-                  sellerID: product.sellerID,
-                  sellerUUID: product.uidSeller,
-                  sellerRating: product.sellerRating,
-                ),
+            builder: (_) => ProductDetailPage(
+              name: product.name,
+              price: product.price,
+              imagePath: product.imagePath,
+              description: product.description,
+              sellerID: product.sellerID,
+              sellerUUID: product.uidSeller,
+              sellerRating: product.sellerRating,
+            ),
           ),
         );
       },
@@ -197,11 +126,11 @@ Widget _buildProductCard(BuildContext context, Product product) {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(12),
-          boxShadow: [
+          boxShadow: const [
             BoxShadow(
               color: Colors.black12,
               blurRadius: 4,
-              offset: const Offset(2, 2),
+              offset: Offset(2, 2),
             ),
           ],
         ),
@@ -211,24 +140,13 @@ Widget _buildProductCard(BuildContext context, Product product) {
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.all(8.0),
-                child:
-                    product.imagePath != null && product.imagePath!.isNotEmpty
-                        ? Image.network(
-                          product.imagePath!,
-                          fit: BoxFit.contain,
-                          errorBuilder: (context, error, stackTrace) {
-                            return const Icon(
-                              Icons.image_not_supported,
-                              size: 100,
-                              color: Colors.grey,
-                            );
-                          },
-                        )
-                        : const Icon(
-                          Icons.image_not_supported,
-                          size: 100,
-                          color: Colors.grey,
-                        ),
+                child: product.imagePath != null && product.imagePath!.isNotEmpty
+                    ? Image.network(
+                        product.imagePath!,
+                        fit: BoxFit.contain,
+                        errorBuilder: (_, __, ___) => const Icon(Icons.image_not_supported, size: 100, color: Colors.grey),
+                      )
+                    : const Icon(Icons.image_not_supported, size: 100, color: Colors.grey),
               ),
             ),
             Padding(
@@ -271,6 +189,5 @@ Widget _buildProductCard(BuildContext context, Product product) {
         ),
       ),
     );
-  
-}
+  }
 }
