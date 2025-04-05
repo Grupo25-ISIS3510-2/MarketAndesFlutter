@@ -1,7 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import '../data/notifiers.dart';
-import '../data/session_timer.dart';
+import 'session_state_controller.dart';
+import 'session_timer_controller.dart';
 
 class ProductDetailController {
   Future<void> logInteractionIfShortSession() async {
