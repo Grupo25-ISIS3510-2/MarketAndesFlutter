@@ -1,47 +1,24 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:marketandes/models/product_model.dart';
+import 'package:marketandes/controllers/product_controller.dart';
 import 'package:marketandes/views/pages/product_detail_page.dart';
 
-class Product {
-  final String name;
-  final int price;
-  final String? imagePath;
-  final String description;
-  final String sellerID;
-  final String uidSeller;
-  final int sellerRating;
-
-  Product({
-    required this.name,
-    required this.price,
-    this.imagePath,
-    required this.description,
-    required this.sellerID,
-    required this.sellerRating,
-    required this.uidSeller,
-  });
-
-  factory Product.fromFirestore(DocumentSnapshot doc) {
-    final data = doc.data() as Map<String, dynamic>;
-    return Product(
-      name: data['name'],
-      price: data['price'],
-      imagePath: data['imageURL'],
-      description: data['description'] ?? 'Sin descripción',
-      sellerID: data['sellerID'] ?? 'Vendedor desconocido',
-      uidSeller: data['uidSeller'] ?? 'Vendedor desconocido',
-      sellerRating: data['sellerRating'] ?? 0,
-    );
-  }
-}
-
-class HomePage extends StatelessWidget {
+class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
-  Future<List<Product>> fetchProducts(String category) async {
-    final snapshot =
-        await FirebaseFirestore.instance.collection('products').get();
-    return snapshot.docs.map((doc) => Product.fromFirestore(doc)).toList();
+  @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  final ProductController _controller = ProductController();
+
+  @override
+  void initState() {
+    super.initState();
+    _controller.fetchUserPreferences().then((_) {
+      setState(() {});
+    });
   }
 
   @override
@@ -56,31 +33,6 @@ class HomePage extends StatelessWidget {
             children: [
               const Center(
                 child: Text(
-                  "Visto recientemente",
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    fontFamily: 'Poppins',
-                    color: Colors.black,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 10),
-              FutureBuilder<List<Product>>(
-                future: fetchProducts('recentlyViewed'),
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const CircularProgressIndicator();
-                  } else if (snapshot.hasError) {
-                    return Text('Error: ${snapshot.error}');
-                  } else {
-                    return _buildProductGrid(snapshot.data ?? [], context);
-                  }
-                },
-              ),
-              const SizedBox(height: 20),
-              const Center(
-                child: Text(
                   "Recomendados",
                   style: TextStyle(
                     fontSize: 22,
@@ -92,14 +44,39 @@ class HomePage extends StatelessWidget {
               ),
               const SizedBox(height: 10),
               FutureBuilder<List<Product>>(
-                future: fetchProducts('recommended'),
+                future: _controller.fetchRecommendedProducts(),
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return const CircularProgressIndicator();
                   } else if (snapshot.hasError) {
                     return Text('Error: ${snapshot.error}');
                   } else {
-                    return _buildProductGrid(snapshot.data ?? [], context);
+                    return _buildProductGrid(snapshot.data ?? []);
+                  }
+                },
+              ),
+              const SizedBox(height: 20),
+              const Center(
+                child: Text(
+                  "Explorar Todos los Productos",
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    fontFamily: 'Poppins',
+                    color: Colors.black,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
+              FutureBuilder<List<Product>>(
+                future: _controller.fetchAllProducts(),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const CircularProgressIndicator();
+                  } else if (snapshot.hasError) {
+                    return Text('Error: ${snapshot.error}');
+                  } else {
+                    return _buildProductGrid(snapshot.data ?? []);
                   }
                 },
               ),
@@ -110,7 +87,7 @@ class HomePage extends StatelessWidget {
     );
   }
 
-  Widget _buildProductGrid(List<Product> products, BuildContext context) {
+  Widget _buildProductGrid(List<Product> products) {
     return GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
@@ -122,39 +99,31 @@ class HomePage extends StatelessWidget {
       ),
       itemCount: products.length,
       itemBuilder: (context, index) {
-        return _buildProductCard(context, products[index]);
+        return _buildProductCard(products[index]);
       },
     );
   }
 
-  Widget _buildProductCard(BuildContext context, Product product) {
+  Widget _buildProductCard(Product product) {
     return GestureDetector(
       onTap: () {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder:
-                (context) => ProductDetailPage(
-                  name: product.name,
-                  price: product.price,
-                  imagePath: product.imagePath,
-                  description: product.description,
-                  sellerID: product.sellerID,
-                  sellerUUID: product.uidSeller,
-                  sellerRating: product.sellerRating,
-                ),
-          ),
+          builder: (_) => ProductDetailPage(product: product),
+        ),
+
         );
       },
       child: Container(
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(12),
-          boxShadow: [
+          boxShadow: const [
             BoxShadow(
               color: Colors.black12,
               blurRadius: 4,
-              offset: const Offset(2, 2),
+              offset: Offset(2, 2),
             ),
           ],
         ),
@@ -164,24 +133,13 @@ class HomePage extends StatelessWidget {
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.all(8.0),
-                child:
-                    product.imagePath != null && product.imagePath!.isNotEmpty
-                        ? Image.network(
-                          product.imagePath!,
-                          fit: BoxFit.contain,
-                          errorBuilder: (context, error, stackTrace) {
-                            return const Icon(
-                              Icons.image_not_supported,
-                              size: 100,
-                              color: Colors.grey,
-                            );
-                          },
-                        )
-                        : const Icon(
-                          Icons.image_not_supported,
-                          size: 100,
-                          color: Colors.grey,
-                        ),
+                child: product.imagePath != null && product.imagePath!.isNotEmpty
+                    ? Image.network(
+                        product.imagePath!,
+                        fit: BoxFit.contain,
+                        errorBuilder: (_, __, ___) => const Icon(Icons.image_not_supported, size: 100, color: Colors.grey),
+                      )
+                    : const Icon(Icons.image_not_supported, size: 100, color: Colors.grey),
               ),
             ),
             Padding(

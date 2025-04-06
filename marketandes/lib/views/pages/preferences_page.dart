@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart'; // Firestore
-import '../../data/notifiers.dart'; // Donde está currentUserUuid
+import '../../controllers/session_state_controller.dart'; // Donde está currentUserUuid
 
 class PreferenciasScreen extends StatefulWidget {
   const PreferenciasScreen({super.key});

@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:proximity_sensor/proximity_sensor.dart';
 import 'package:screen_brightness/screen_brightness.dart';
-import '../../data/notifiers.dart'; // para el currentUserUuid
+import '../../controllers/session_state_controller.dart'; // para el currentUserUuid
 
 class ChatConversationPage extends StatefulWidget {
   final String chatId;

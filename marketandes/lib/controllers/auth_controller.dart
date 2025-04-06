@@ -1,9 +1,9 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart'; // Para saber la plataforma
-import 'package:device_info_plus/device_info_plus.dart'; // Info del dispositivo
-import '../data/notifiers.dart';
+import 'package:flutter/foundation.dart'; 
+import 'package:device_info_plus/device_info_plus.dart'; 
+import 'session_state_controller.dart';
 
 ValueNotifier<AuthService> authService = ValueNotifier(AuthService());
 
@@ -13,7 +13,6 @@ class AuthService {
   User? get currentUser => firebaseAuth.currentUser;
   Stream<User?> get authStateChanges => firebaseAuth.authStateChanges();
 
-  /// Registro de evento de usuario (login, logout, signup)
   Future<void> _registerEvent(String eventType, String uid) async {
     try {
       final deviceInfo = DeviceInfoPlugin();
@@ -63,7 +62,7 @@ class AuthService {
     final uid = credential.user?.uid ?? "";
     currentUserUuid.value = uid;
 
-    // ✅ Registro del evento LOGIN
+  
     await _registerEvent('login', uid);
 
     return credential;
@@ -103,7 +102,7 @@ class AuthService {
         'latitud': 4.601295,
       });
 
-      // ✅ Registro del evento SIGNUP
+      
       await _registerEvent('signup', user.uid);
 
       return userCredential;
@@ -126,7 +125,7 @@ class AuthService {
 
     await firebaseAuth.signOut();
 
-    // ✅ Registro del evento LOGOUT
+
     if (uid != null) {
       await _registerEvent('logout', uid);
     }

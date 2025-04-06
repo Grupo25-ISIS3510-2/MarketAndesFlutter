@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../../data/notifiers.dart';
+import '../../controllers/session_state_controller.dart';
 import 'chat_detail_page.dart';
 import 'map_users.dart'; // ChatConversationPage está aquí
 

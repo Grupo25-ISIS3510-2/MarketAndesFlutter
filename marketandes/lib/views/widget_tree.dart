@@ -5,7 +5,7 @@ import 'package:marketandes/views/pages/home_page.dart';
 import 'package:marketandes/views/pages/add_page.dart';
 import 'package:marketandes/views/pages/map_page.dart';
 import 'package:marketandes/views/pages/login_page.dart';
-import 'package:marketandes/widgets/navbar_widget.dart';
+import 'package:marketandes/views/widgets/navbar_widget.dart';
 
 class HomeWithNavbar extends StatefulWidget {
   final int selectedIndex;

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import '../../controllers/rating_controller.dart';
+import '../../models/rating_model.dart';
 
 class RatingFormPage extends StatefulWidget {
   const RatingFormPage({super.key});
@@ -11,17 +12,17 @@ class RatingFormPage extends StatefulWidget {
 class _RatingFormPageState extends State<RatingFormPage> {
   int selectedRating = 0;
   final TextEditingController commentController = TextEditingController();
+  final RatingController _ratingController = RatingController();
 
   void _submitReview() async {
     try {
-      final reviewCollection = FirebaseFirestore.instance.collection('shopping_reviews');
-      final reviewData = {
-        'rating': selectedRating,
-        'comment': commentController.text,
-        'timestamp': FieldValue.serverTimestamp(),
-      };
+      final rating = Rating(
+        rating: selectedRating,
+        comment: commentController.text,
+        timestamp: DateTime.now(),
+      );
 
-      await reviewCollection.add(reviewData);
+      await _ratingController.submitRating(rating);
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Calificación enviada exitosamente')),
@@ -35,7 +36,7 @@ class _RatingFormPageState extends State<RatingFormPage> {
       Navigator.pop(context);
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error al enviar la calificación: \$e')),
+        SnackBar(content: Text('Error al enviar la calificación: $e')),
       );
     }
   }
@@ -71,92 +72,101 @@ class _RatingFormPageState extends State<RatingFormPage> {
               ),
             ),
             const SizedBox(height: 20),
-            Container(
-              padding: const EdgeInsets.all(10),
-              margin: const EdgeInsets.symmetric(horizontal: 20),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF4F4F4),
-                borderRadius: BorderRadius.circular(15),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.grey.withOpacity(0.3),
-                    blurRadius: 5,
-                    offset: const Offset(0, 3),
-                  ),
-                ],
-              ),
-              child: Wrap(
-                spacing: 5.0,
-                alignment: WrapAlignment.center,
-                children: List.generate(5, (index) {
-                  return IconButton(
-                    icon: Icon(
-                      Icons.star,
-                      color: index < selectedRating ? const Color(0xFFFDC500) : Colors.grey,
-                      size: 40,
-                    ),
-                    onPressed: () {
-                      setState(() {
-                        selectedRating = index + 1;
-                      });
-                    },
-                  );
-                }),
-              ),
-            ),
+            _buildStarRating(),
             const SizedBox(height: 30),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF4F4F4),
-                borderRadius: BorderRadius.circular(15),
-                border: Border.all(
-                  color: Colors.grey.withOpacity(0.6),
-                  width: 1,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.grey.withOpacity(0.3),
-                    blurRadius: 5,
-                    offset: const Offset(0, 3),
-                  ),
-                ],
-              ),
-              child: TextField(
-                controller: commentController,
-                maxLines: 8,
-                style: const TextStyle(color: Colors.black),
-                decoration: const InputDecoration(
-                  hintText: "Escribe tu comentario...",
-                  hintStyle: TextStyle(color: Colors.grey),
-                  border: InputBorder.none,
-                ),
-              ),
-            ),
+            _buildCommentBox(),
             const SizedBox(height: 40),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFFDC500),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(15),
-                ),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 24,
-                  vertical: 14,
-                ),
-                elevation: 5,
-              ),
-              onPressed: _submitReview,
-              child: const Text(
-                "Enviar Calificación",
-                style: TextStyle(
-                  color: Colors.black,
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
+            _buildSubmitButton(),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStarRating() {
+    return Container(
+      padding: const EdgeInsets.all(10),
+      margin: const EdgeInsets.symmetric(horizontal: 20),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF4F4F4),
+        borderRadius: BorderRadius.circular(15),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.3),
+            blurRadius: 5,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Wrap(
+        spacing: 5.0,
+        alignment: WrapAlignment.center,
+        children: List.generate(5, (index) {
+          return IconButton(
+            icon: Icon(
+              Icons.star,
+              color: index < selectedRating ? const Color(0xFFFDC500) : Colors.grey,
+              size: 40,
+            ),
+            onPressed: () {
+              setState(() {
+                selectedRating = index + 1;
+              });
+            },
+          );
+        }),
+      ),
+    );
+  }
+
+  Widget _buildCommentBox() {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF4F4F4),
+        borderRadius: BorderRadius.circular(15),
+        border: Border.all(
+          color: Colors.grey.withOpacity(0.6),
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.3),
+            blurRadius: 5,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: TextField(
+        controller: commentController,
+        maxLines: 8,
+        style: const TextStyle(color: Colors.black),
+        decoration: const InputDecoration(
+          hintText: "Escribe tu comentario...",
+          hintStyle: TextStyle(color: Colors.grey),
+          border: InputBorder.none,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSubmitButton() {
+    return ElevatedButton(
+      style: ElevatedButton.styleFrom(
+        backgroundColor: const Color(0xFFFDC500),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(15),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+        elevation: 5,
+      ),
+      onPressed: _submitReview,
+      child: const Text(
+        "Enviar Calificación",
+        style: TextStyle(
+          color: Colors.black,
+          fontSize: 22,
+          fontWeight: FontWeight.bold,
         ),
       ),
     );

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:marketandes/auth/auth_service.dart';
-import 'package:marketandes/data/session_timer.dart';
+import 'package:marketandes/controllers/auth_controller.dart';
+import 'package:marketandes/controllers/session_timer_controller.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});

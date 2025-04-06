@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:marketandes/data/notifiers.dart';
+import 'package:marketandes/controllers/session_state_controller.dart';
 import 'package:marketandes/views/widget_tree.dart';
 import 'package:marketandes/views/pages/home_page.dart';
 
