@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:marketandes/controllers/auth_controller.dart';
-import 'package:marketandes/controllers/session_timer_controller.dart';
+import '../../models/login_model.dart';
+import '../../controllers/login_controller.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -11,70 +10,13 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
-  final TextEditingController emailController = TextEditingController();
-  final TextEditingController passwordController = TextEditingController();
+  final LoginModel model = LoginModel();
+  late LoginController controller;
 
-  String? errorMessage;
-  bool isLoading = false;
-
-  Future<void> _login() async {
-    setState(() {
-      isLoading = true;
-      errorMessage = null;
-    });
-
-    final email = emailController.text.trim();
-    final password = passwordController.text.trim();
-
-    try {
-      if (!email.endsWith('@uniandes.edu.co')) {
-        throw FirebaseAuthException(
-          code: 'invalid-email',
-          message: 'Usa tu correo institucional @uniandes.edu.co',
-        );
-      }
-
-      await authService.value.signIn(email: email, password: password);
-
-      sessionStartTime = DateTime.now(); // <-- Línea añadida
-
-      Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
-    } on FirebaseAuthException catch (e) {
-      debugPrint(
-        'FirebaseAuthException -> code: ${e.code}, message: ${e.message}',
-      );
-      setState(() {
-        errorMessage = _firebaseErrorToMessage(e);
-      });
-    } catch (e) {
-      debugPrint('Unexpected error: $e');
-      setState(() {
-        errorMessage = 'Ocurrió un error inesperado. Inténtalo de nuevo.';
-      });
-    } finally {
-      setState(() {
-        isLoading = false;
-      });
-    }
-  }
-
-  String _firebaseErrorToMessage(FirebaseAuthException e) {
-    switch (e.code) {
-      case 'user-not-found':
-        return 'No se encontró un usuario con ese correo.';
-      case 'wrong-password':
-        return 'La contraseña es incorrecta. Intenta de nuevo.';
-      case 'invalid-email':
-        return e.message ?? 'Correo inválido. Usa el correo institucional.';
-      case 'user-disabled':
-        return 'Esta cuenta ha sido deshabilitada. Contacta soporte.';
-      case 'too-many-requests':
-        return 'Demasiados intentos fallidos. Espera un momento e intenta de nuevo.';
-      case 'network-request-failed':
-        return 'Sin conexión. Verifica tu internet.';
-      default:
-        return e.message ?? 'Error desconocido. Intenta de nuevo.';
-    }
+  @override
+  void initState() {
+    super.initState();
+    controller = LoginController(model: model, context: context);
   }
 
   @override
@@ -131,7 +73,7 @@ class _LoginPageState extends State<LoginPage> {
                               SizedBox(
                                 height: 40,
                                 child: TextField(
-                                  controller: emailController,
+                                  controller: model.emailController,
                                   keyboardType: TextInputType.emailAddress,
                                   style: const TextStyle(color: Colors.black87),
                                   decoration: InputDecoration(
@@ -160,7 +102,7 @@ class _LoginPageState extends State<LoginPage> {
                               SizedBox(
                                 height: 40,
                                 child: TextField(
-                                  controller: passwordController,
+                                  controller: model.passwordController,
                                   obscureText: true,
                                   style: const TextStyle(color: Colors.black87),
                                   decoration: InputDecoration(
@@ -176,19 +118,17 @@ class _LoginPageState extends State<LoginPage> {
                                 ),
                               ),
                               const SizedBox(height: 15),
-
-                              if (errorMessage != null)
+                              if (model.errorMessage != null)
                                 Padding(
                                   padding: const EdgeInsets.only(bottom: 10),
                                   child: Text(
-                                    errorMessage!,
+                                    model.errorMessage!,
                                     style: const TextStyle(
                                       color: Colors.red,
                                       fontSize: 14,
                                     ),
                                   ),
                                 ),
-
                               SizedBox(
                                 width: double.infinity,
                                 child: ElevatedButton(
@@ -198,20 +138,26 @@ class _LoginPageState extends State<LoginPage> {
                                       borderRadius: BorderRadius.circular(6),
                                     ),
                                   ),
-                                  onPressed: isLoading ? null : _login,
-                                  child: isLoading
-                                      ? const CircularProgressIndicator(
-                                          color: Colors.white,
-                                        )
-                                      : const Text(
-                                          "Iniciar sesión",
-                                          style: TextStyle(
-                                            color: Colors.white,
-                                            fontFamily: 'Poppins',
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 15,
+                                  onPressed:
+                                      model.isLoading
+                                          ? null
+                                          : () => controller.login(
+                                            () => setState(() {}),
                                           ),
-                                        ),
+                                  child:
+                                      model.isLoading
+                                          ? const CircularProgressIndicator(
+                                            color: Colors.white,
+                                          )
+                                          : const Text(
+                                            "Iniciar sesión",
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                              fontFamily: 'Poppins',
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 15,
+                                            ),
+                                          ),
                                 ),
                               ),
                             ],
