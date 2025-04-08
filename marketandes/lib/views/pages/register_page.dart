@@ -71,6 +71,7 @@ class _RegisterPageState extends State<RegisterPage> {
                                 controller.emailController,
                                 "example@uniandes.edu.co",
                                 false,
+                                maxLegth: 40,
                               ),
                               const SizedBox(height: 15),
                               _buildTextField(
@@ -78,6 +79,7 @@ class _RegisterPageState extends State<RegisterPage> {
                                 controller.passwordController,
                                 "password",
                                 true,
+                                maxLegth: 30,
                               ),
                               const SizedBox(height: 15),
                               _buildTextField(
@@ -85,6 +87,7 @@ class _RegisterPageState extends State<RegisterPage> {
                                 controller.fullNameController,
                                 "nombre y apellido",
                                 false,
+                                maxLegth: 60,
                               ),
                               const SizedBox(height: 15),
                               if (errorMessage != null)
@@ -160,8 +163,9 @@ class _RegisterPageState extends State<RegisterPage> {
     String label,
     TextEditingController controller,
     String hint,
-    bool obscure,
-  ) {
+    bool obscure, {
+    int? maxLegth,
+  }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -180,9 +184,11 @@ class _RegisterPageState extends State<RegisterPage> {
           child: TextField(
             controller: controller,
             obscureText: obscure,
+            maxLength: maxLegth,
             style: const TextStyle(color: Colors.black87),
             decoration: InputDecoration(
               hintText: hint,
+              counterText: '',
               contentPadding: const EdgeInsets.symmetric(
                 vertical: 0,
                 horizontal: 12,
