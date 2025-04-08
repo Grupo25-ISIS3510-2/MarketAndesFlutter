@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:marketandes/controllers/auth_controller.dart';
-import 'preferences_page.dart';
+import 'package:marketandes/controllers/register_controller.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -11,100 +9,20 @@ class RegisterPage extends StatefulWidget {
 }
 
 class _RegisterPageState extends State<RegisterPage> {
-  final TextEditingController emailController = TextEditingController();
-  final TextEditingController passwordController = TextEditingController();
-  final TextEditingController fullNameController = TextEditingController();
-
-  String? errorMessage;
+  final RegisterController controller = RegisterController();
   bool isLoading = false;
+  String? errorMessage;
 
-  // Esta es la función que se llama al darle al botón de "Iniciar sesión"
-  Future<void> _login() async {
+  void _toggleLoading() {
     setState(() {
-      isLoading = true;
-      errorMessage = null;
+      isLoading = !isLoading;
     });
-
-    final email = emailController.text.trim();
-    final password = passwordController.text.trim();
-    final fullName = fullNameController.text.trim();
-
-    try {
-      if (!email.endsWith('@uniandes.edu.co')) {
-        throw FirebaseAuthException(
-          code: 'invalid-email',
-          message: 'Usa tu correo institucional @uniandes.edu.co',
-        );
-      }
-      if (password.length < 8) {
-        throw FirebaseAuthException(
-          code: 'wrong-password',
-          message: 'Contraseña muy corta',
-        );
-      }
-      if (fullName.isEmpty) {
-        throw FirebaseAuthException(
-          code: 'wrong-username',
-          message: 'Necesita poner un nombre de usuario.',
-        );
-      }
-
-      await authService.value.createAccount(
-        email: email,
-        password: password,
-        fullName: fullName,
-      );
-
-      // Si llega aquí, el usuario inició sesión correctamente
-      Navigator.pushNamedAndRemoveUntil(
-        context,
-        '/preferences',
-        (route) => false,
-      );
-    } on FirebaseAuthException catch (e) {
-      // Manejo detallado de errores específicos de FirebaseAuth
-      debugPrint(
-        'FirebaseAuthException -> code: ${e.code}, message: ${e.message}',
-      );
-      setState(() {
-        errorMessage = _firebaseErrorToMessage(e);
-      });
-    } catch (e) {
-      // Cualquier otro error inesperado
-      print('Unexpected error: $e');
-      debugPrint('Unexpected error: $e');
-      setState(() {
-        errorMessage = 'Ocurrió un error inesperado. Inténtalo de nuevo.';
-      });
-    } finally {
-      setState(() {
-        isLoading = false;
-      });
-    }
   }
 
-  String _firebaseErrorToMessage(FirebaseAuthException e) {
-    switch (e.code) {
-      case 'user-not-found':
-        return 'No se encontró un usuario con ese correo.';
-      case 'wrong-password':
-        if (e.message == 'Contraseña muy corta') {
-          return 'Contraseña muy corta';
-        }
-        return 'La contraseña es incorrecta. Intenta de nuevo.';
-      case 'invalid-email':
-        return e.message ?? 'Correo inválido. Usa el correo institucional.';
-      case 'user-disabled':
-        return 'Esta cuenta ha sido deshabilitada. Contacta soporte.';
-      case 'too-many-requests':
-        return 'Demasiados intentos fallidos. Espera un momento e intenta de nuevo.';
-      case 'network-request-failed':
-        return 'Sin conexión. Verifica tu internet.';
-      case 'wrong-username':
-        return 'Necesita poner un nombre de usuario.';
-      default:
-        return e.message ?? 'Error desconocido. Intenta de nuevo.';
-    }
+  void _setError(String? msg) {
+    setState(() {
+      errorMessage = msg;
+    });
   }
 
   @override
@@ -148,93 +66,27 @@ class _RegisterPageState extends State<RegisterPage> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text(
+                              _buildTextField(
                                 "Email",
-                                style: TextStyle(
-                                  fontFamily: 'Poppins',
-                                  color: Colors.black,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16,
-                                ),
-                              ),
-                              const SizedBox(height: 10),
-                              SizedBox(
-                                height: 40,
-                                child: TextField(
-                                  controller: emailController,
-                                  keyboardType: TextInputType.emailAddress,
-                                  style: const TextStyle(color: Colors.black87),
-                                  decoration: InputDecoration(
-                                    hintText: "example@uniandes.edu.co",
-                                    contentPadding: const EdgeInsets.symmetric(
-                                      vertical: 0,
-                                      horizontal: 12,
-                                    ),
-                                    border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                  ),
-                                ),
+                                controller.emailController,
+                                "example@uniandes.edu.co",
+                                false,
                               ),
                               const SizedBox(height: 15),
-                              const Text(
+                              _buildTextField(
                                 "Contraseña",
-                                style: TextStyle(
-                                  fontFamily: 'Poppins',
-                                  color: Colors.black,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16,
-                                ),
-                              ),
-                              const SizedBox(height: 10),
-                              SizedBox(
-                                height: 40,
-                                child: TextField(
-                                  controller: passwordController,
-                                  obscureText: true,
-                                  style: const TextStyle(color: Colors.black87),
-                                  decoration: InputDecoration(
-                                    hintText: "password",
-                                    contentPadding: const EdgeInsets.symmetric(
-                                      vertical: 0,
-                                      horizontal: 12,
-                                    ),
-                                    border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                  ),
-                                ),
+                                controller.passwordController,
+                                "password",
+                                true,
                               ),
                               const SizedBox(height: 15),
-                              const Text(
+                              _buildTextField(
                                 "Nombre",
-                                style: TextStyle(
-                                  fontFamily: 'Poppins',
-                                  color: Colors.black,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16,
-                                ),
-                              ),
-                              const SizedBox(height: 10),
-                              SizedBox(
-                                height: 40,
-                                child: TextField(
-                                  controller: fullNameController,
-                                  style: const TextStyle(color: Colors.black87),
-                                  decoration: InputDecoration(
-                                    hintText: "nombre y apelido",
-                                    contentPadding: const EdgeInsets.symmetric(
-                                      vertical: 0,
-                                      horizontal: 12,
-                                    ),
-                                    border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                  ),
-                                ),
+                                controller.fullNameController,
+                                "nombre y apellido",
+                                false,
                               ),
                               const SizedBox(height: 15),
-
                               if (errorMessage != null)
                                 Padding(
                                   padding: const EdgeInsets.only(bottom: 10),
@@ -246,7 +98,6 @@ class _RegisterPageState extends State<RegisterPage> {
                                     ),
                                   ),
                                 ),
-
                               SizedBox(
                                 width: double.infinity,
                                 child: ElevatedButton(
@@ -256,7 +107,16 @@ class _RegisterPageState extends State<RegisterPage> {
                                       borderRadius: BorderRadius.circular(6),
                                     ),
                                   ),
-                                  onPressed: isLoading ? null : _login,
+                                  onPressed:
+                                      isLoading
+                                          ? null
+                                          : () {
+                                            controller.register(
+                                              context,
+                                              _toggleLoading,
+                                              _setError,
+                                            );
+                                          },
                                   child:
                                       isLoading
                                           ? const CircularProgressIndicator(
@@ -283,8 +143,6 @@ class _RegisterPageState extends State<RegisterPage> {
               ),
             ),
           ),
-
-          // Botón de retroceso
           Positioned(
             top: 40,
             left: 20,
@@ -295,6 +153,47 @@ class _RegisterPageState extends State<RegisterPage> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildTextField(
+    String label,
+    TextEditingController controller,
+    String hint,
+    bool obscure,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            fontFamily: 'Poppins',
+            color: Colors.black,
+            fontWeight: FontWeight.bold,
+            fontSize: 16,
+          ),
+        ),
+        const SizedBox(height: 10),
+        SizedBox(
+          height: 40,
+          child: TextField(
+            controller: controller,
+            obscureText: obscure,
+            style: const TextStyle(color: Colors.black87),
+            decoration: InputDecoration(
+              hintText: hint,
+              contentPadding: const EdgeInsets.symmetric(
+                vertical: 0,
+                horizontal: 12,
+              ),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
