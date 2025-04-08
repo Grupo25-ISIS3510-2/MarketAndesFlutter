@@ -190,7 +190,12 @@ class _MapaEncuentroPageState extends State<MapaEncuentroPage> {
           ),
           Expanded(
             child: FlutterMap(
-              options: MapOptions(center: puntoEncuentro, zoom: 14),
+              options: MapOptions(
+                center: puntoEncuentro,
+                zoom: 14,
+                minZoom: 8,
+                maxZoom: 18,
+              ),
               children: [
                 TileLayer(
                   urlTemplate:
