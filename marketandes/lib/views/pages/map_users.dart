@@ -66,22 +66,24 @@ class _MapaEncuentroPageState extends State<MapaEncuentroPage> {
     if (datosOtro == null) return;
 
     ubicacionOtraPersona = LatLng(
-      datosOtro['latitud'] ?? 0.0,
-      datosOtro['longitud'] ?? 0.0,
+      datosOtro['latitud'] ?? 4.601635,
+      datosOtro['longitud'] ?? -74.065415,
     );
 
-    final lat = datosChat['latitudPuntoEncuentro'] ?? 0.0;
-    final lng = datosChat['longitudPuntoEncuentro'] ?? 0.0;
+    final lat = datosChat['latitudPuntoEncuentro'] ?? 4.601635;
+    final lng = datosChat['longitudPuntoEncuentro'] ?? -74.065415;
+    print(lat);
+    print(lng);
 
     puntoEncuentro =
-        (lat == 0.0 && lng == 0.0)
+        (lat == 4.601635 && lng == -74.065415)
             ? MapaEncuentroModel.calcularPuntoMedio(
               miUbicacion,
               ubicacionOtraPersona,
             )
             : LatLng(lat, lng);
 
-    if (lat == 0.0 && lng == 0.0) {
+    if (lat == -74.065415 && lng == -74.065415) {
       await _controller.actualizarPuntoEncuentro(widget.chatId, puntoEncuentro);
     }
 
