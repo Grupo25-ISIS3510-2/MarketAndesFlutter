@@ -1,58 +1,23 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart'; // Firestore
-import '../../controllers/session_state_controller.dart'; // Donde está currentUserUuid
+import '../../models/preferences_model.dart';
+import '../../controllers/preferences_controller.dart';
 
 class PreferenciasScreen extends StatefulWidget {
   const PreferenciasScreen({super.key});
+
   @override
   State<PreferenciasScreen> createState() => _PreferenciasScreenState();
 }
 
 class _PreferenciasScreenState extends State<PreferenciasScreen> {
-  final List<String> _opciones = [
-    'Arte',
-    'Fisica',
-    'Utensilios',
-    'Diseño',
-    'Lenguas',
-    'Ingenieria',
-    'Libros',
-    'Medicina',
-    'Tecnología',
-    'Administración',
-    'Software',
-    'Música',
-    'Arquitectura',
-    'Psicología',
-    'Educación',
-    'Química',
-    'Economía',
-    'Ciencias',
-    'Derecho',
-    'Ingles',
-  ];
+  late final PreferenciasModel _model;
+  late final PreferenciasController _controller;
 
-  final Set<String> _seleccionadas = {'Software', 'Derecho'};
-
-  // Método para guardar preferencias en Firestore
-  Future<void> guardarPreferencias() async {
-    try {
-      final String? uid = currentUserUuid.value;
-
-      if (uid == null || uid.isEmpty) {
-        print('UID no disponible');
-        return;
-      }
-
-      await FirebaseFirestore.instance.collection('users').doc(uid).update({
-        'preferencias': _seleccionadas.toList(),
-      });
-
-      print('Preferencias actualizadas para el usuario $uid');
-      Navigator.pushReplacementNamed(context, '/home'); // Ir a Home
-    } catch (error) {
-      print('Error al guardar preferencias: $error');
-    }
+  @override
+  void initState() {
+    super.initState();
+    _model = PreferenciasModel();
+    _controller = PreferenciasController(_model);
   }
 
   @override
@@ -90,18 +55,12 @@ class _PreferenciasScreenState extends State<PreferenciasScreen> {
                     spacing: 10,
                     runSpacing: 10,
                     children:
-                        _opciones.map((opcion) {
-                          final bool isSelected = _seleccionadas.contains(
-                            opcion,
-                          );
+                        _model.opciones.map((opcion) {
+                          final isSelected = _controller.isSeleccionada(opcion);
                           return GestureDetector(
                             onTap: () {
                               setState(() {
-                                if (isSelected) {
-                                  _seleccionadas.remove(opcion);
-                                } else {
-                                  _seleccionadas.add(opcion);
-                                }
+                                _controller.toggleOpcion(opcion);
                               });
                             },
                             child: Container(
@@ -151,7 +110,10 @@ class _PreferenciasScreenState extends State<PreferenciasScreen> {
                     padding: const EdgeInsets.symmetric(vertical: 16),
                   ),
                   onPressed: () async {
-                    await guardarPreferencias();
+                    await _controller.guardarPreferencias();
+                    if (mounted) {
+                      Navigator.pushReplacementNamed(context, '/home');
+                    }
                   },
                   child: const Text(
                     'CONTINUAR',

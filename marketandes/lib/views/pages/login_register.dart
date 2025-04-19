@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import '../../controllers/login_register_controller.dart';
 
 class LoginRegisterPage extends StatelessWidget {
   const LoginRegisterPage({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final controller = LoginRegisterController();
+
     return Scaffold(
       body: Container(
         color: Colors.white,
@@ -27,7 +30,7 @@ class LoginRegisterPage extends StatelessWidget {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
-                    Text(
+                    const Text(
                       '¡Al hacer clic en "Iniciar sesión", aceptas el tratamiento de tus datos para ofrecerte una mejor experiencia!',
                       textAlign: TextAlign.center,
                       style: TextStyle(
@@ -36,46 +39,49 @@ class LoginRegisterPage extends StatelessWidget {
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    SizedBox(height: 20),
-                    SizedBox(
-                      height: 50,
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Color(0xFF00296B),
-                        ),
-                        onPressed: () {
-                          // Navega al login page
-                          Navigator.pushNamed(context, '/login');
-                        },
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Image.asset(
-                              'assets/images/uniAndesLogo.png',
-                              height: 30,
+                    const SizedBox(height: 20),
+                    LayoutBuilder(
+                      builder: (context, constraints) {
+                        return SizedBox(
+                          height: 50,
+                          width: constraints.maxWidth,
+                          child: ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF00296B),
                             ),
-                            SizedBox(width: 10),
-                            Text(
-                              "INICIAR SESIÓN CON CUENTA UNIANDES",
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontFamily: "Mulish",
-                                fontSize: 13,
+                            onPressed: () => controller.goToLogin(context),
+                            child: FittedBox(
+                              // <-- Añadido para que el contenido escale
+                              fit: BoxFit.scaleDown,
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Image.asset(
+                                    'assets/images/uniAndesLogo.png',
+                                    height: 30,
+                                  ),
+                                  const SizedBox(width: 10),
+                                  const Text(
+                                    "INICIAR SESIÓN CON CUENTA UNIANDES",
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontFamily: "Mulish",
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
-                          ],
-                        ),
-                      ),
+                          ),
+                        );
+                      },
                     ),
-                    SizedBox(height: 10),
+
+                    const SizedBox(height: 10),
                     Center(
                       child: TextButton(
-                        onPressed: () {
-                          // Navega a la página de registro
-                          Navigator.pushNamed(context, '/register');
-                        },
-                        child: Text(
+                        onPressed: () => controller.goToRegister(context),
+                        child: const Text(
                           "¿Primera vez? Regístrate aquí",
                           style: TextStyle(
                             fontFamily: "Poppins",

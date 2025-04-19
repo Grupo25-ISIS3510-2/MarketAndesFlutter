@@ -1,12 +1,11 @@
-import 'dart:convert';
-import 'dart:math';
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
-import 'package:http/http.dart' as http;
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:permission_handler/permission_handler.dart';
+import '../../controllers/map_encounter_controller.dart';
+import '../../models/map_encounter_model.dart';
 import '../../controllers/session_state_controller.dart';
 
 class MapaEncuentroPage extends StatefulWidget {
@@ -24,293 +23,121 @@ class MapaEncuentroPage extends StatefulWidget {
 }
 
 class _MapaEncuentroPageState extends State<MapaEncuentroPage> {
+  final _controller = MapaEncuentroController();
+
   late LatLng miUbicacion;
   late LatLng ubicacionOtraPersona;
   late LatLng puntoEncuentro;
+  List<LatLng> ruta = [];
 
-  List<LatLng> rutaMiUbicacion = [];
+  StreamSubscription<Position>? _stream;
   bool cargando = true;
-
-  Stream<Position>? _positionStream;
 
   @override
   void initState() {
     super.initState();
-    _verificarPermisosYInicializar();
+    _inicializar();
   }
 
   @override
   void dispose() {
+    _stream?.cancel();
     super.dispose();
-    _positionStream = null;
   }
 
-  Future<void> _verificarPermisosYInicializar() async {
-    final status = await Permission.location.request();
-
-    if (status.isGranted) {
-      print('Permiso de ubicación concedido');
-      inicializarMapa();
-    } else if (status.isDenied) {
-      print('Permiso de ubicación denegado');
-      _mostrarDialogoPermisoDenegado();
-    } else if (status.isPermanentlyDenied) {
-      print('Permiso permanentemente denegado');
-      _mostrarDialogoIrAjustes();
+  Future<void> _inicializar() async {
+    final permiso = await _controller.verificarPermisosUbicacion();
+    if (!permiso) {
+      await _mostrarDialogoPermisos();
+      return;
     }
+
+    miUbicacion = await _controller.obtenerMiUbicacion();
+
+    final datosChat = await _controller.obtenerDatosChat(widget.chatId);
+    if (datosChat == null) return;
+
+    final uuidUser = datosChat['uuidUser'].id;
+    final uuidOwner = datosChat['uuidOwner'].id;
+    final miUid = currentUserUuid.value;
+    final otroUid = (uuidUser == miUid) ? uuidOwner : uuidUser;
+
+    final datosOtro = await _controller.obtenerDatosUsuario(otroUid);
+    if (datosOtro == null) return;
+
+    ubicacionOtraPersona = LatLng(
+      datosOtro['latitud'] ?? 4.601635,
+      datosOtro['longitud'] ?? -74.065415,
+    );
+
+    final lat = datosChat['latitudPuntoEncuentro'] ?? 4.601635;
+    final lng = datosChat['longitudPuntoEncuentro'] ?? -74.065415;
+    print(lat);
+    print(lng);
+
+    puntoEncuentro =
+        (lat == 4.601635 && lng == -74.065415)
+            ? MapaEncuentroModel.calcularPuntoMedio(
+              miUbicacion,
+              ubicacionOtraPersona,
+            )
+            : LatLng(lat, lng);
+
+    if (lat == -74.065415 && lng == -74.065415) {
+      await _controller.actualizarPuntoEncuentro(widget.chatId, puntoEncuentro);
+    }
+
+    ruta = await _controller.obtenerRuta(miUbicacion, puntoEncuentro);
+    setState(() => cargando = false);
+    _escucharUbicacion();
   }
 
-  void _mostrarDialogoPermisoDenegado() {
-    showDialog(
+  Future<void> _mostrarDialogoPermisos() async {
+    await showDialog(
       context: context,
       builder:
-          (context) => AlertDialog(
+          (_) => AlertDialog(
             title: const Text('Permiso requerido'),
             content: const Text(
               'Debes permitir el acceso a la ubicación para continuar.',
             ),
             actions: [
               TextButton(
+                child: const Text('Abrir configuración'),
                 onPressed: () {
-                  Navigator.pop(context);
-                  _verificarPermisosYInicializar();
-                },
-                child: const Text('Reintentar'),
-              ),
-            ],
-          ),
-    );
-  }
-
-  void _mostrarDialogoIrAjustes() {
-    showDialog(
-      context: context,
-      builder:
-          (context) => AlertDialog(
-            title: const Text('Permiso denegado permanentemente'),
-            content: const Text(
-              'Debes habilitar el permiso manualmente en la configuración de la app.',
-            ),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.pop(context);
                   openAppSettings();
+                  Navigator.pop(context);
                 },
-                child: const Text('Ir a configuración'),
               ),
             ],
           ),
     );
   }
 
-  Future<void> inicializarMapa() async {
-    await obtenerMiUbicacion();
-
-    final chatDoc =
-        await FirebaseFirestore.instance
-            .collection('chatsFlutter')
-            .doc(widget.chatId)
-            .get();
-
-    final datosChat = chatDoc.data();
-
-    if (datosChat == null) {
-      print('Chat no encontrado');
-      return;
-    }
-
-    final String uuidUser = (datosChat['uuidUser'] as DocumentReference).id;
-    final String uuidOwner = (datosChat['uuidOwner'] as DocumentReference).id;
-
-    print('🔹 uuidUser: $uuidUser');
-    print('🔸 uuidOwner: $uuidOwner');
-    String miUid = '';
-    String otroUid = '';
-
-    if (uuidUser == currentUserUuid.value) {
-      miUid = uuidUser;
-      otroUid = uuidOwner;
-    } else if (uuidOwner == currentUserUuid.value) {
-      miUid = uuidOwner;
-      otroUid = uuidUser;
-    }
-
-    final otroUserDoc =
-        await FirebaseFirestore.instance.collection('users').doc(otroUid).get();
-
-    final datosOtroUsuario = otroUserDoc.data();
-
-    if (datosOtroUsuario == null) {
-      print('Otro usuario no encontrado');
-      return;
-    }
-
-    double latOtraPersona = datosOtroUsuario['latitud'] ?? 0.0;
-    double lngOtraPersona = datosOtroUsuario['longitud'] ?? 0.0;
-
-    ubicacionOtraPersona = LatLng(latOtraPersona, lngOtraPersona);
-
-    double latPuntoEncuentro = datosChat['latitudPuntoEncuentro'] ?? 0.0;
-    double lngPuntoEncuentro = datosChat['longitudPuntoEncuentro'] ?? 0.0;
-
-    if (latPuntoEncuentro == 0.0 && lngPuntoEncuentro == 0.0) {
-      puntoEncuentro = calcularPuntoMedio(miUbicacion, ubicacionOtraPersona);
-
-      await FirebaseFirestore.instance
-          .collection('chatsFlutter')
-          .doc(widget.chatId)
-          .update({
-            'latitudPuntoEncuentro': puntoEncuentro.latitude,
-            'longitudPuntoEncuentro': puntoEncuentro.longitude,
-          });
-
-      print('Punto de encuentro calculado y guardado');
-    } else {
-      puntoEncuentro = LatLng(latPuntoEncuentro, lngPuntoEncuentro);
-      print('ℹPunto de encuentro existente encontrado');
-    }
-
-    await _obtenerRuta();
-
-    setState(() {
-      cargando = false;
-    });
-
-    _escucharUbicacionTiempoReal();
-  }
-
-  Future<void> obtenerMiUbicacion() async {
-    try {
-      bool servicioActivo = await Geolocator.isLocationServiceEnabled();
-      if (!servicioActivo) {
-        print('Servicios de ubicación deshabilitados');
-        miUbicacion = _randomPointEnBogota();
-        return;
-      }
-
-      LocationPermission permiso = await Geolocator.checkPermission();
-      if (permiso == LocationPermission.denied) {
-        permiso = await Geolocator.requestPermission();
-        if (permiso == LocationPermission.deniedForever ||
-            permiso == LocationPermission.denied) {
-          print('Permisos de ubicación denegados');
-          miUbicacion = _randomPointEnBogota();
-          return;
-        }
-      }
-
-      final posicion = await Geolocator.getCurrentPosition();
-      miUbicacion = LatLng(posicion.latitude, posicion.longitude);
-
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(currentUserUuid.value)
-          .update({
-            'latitud': miUbicacion.latitude,
-            'longitud': miUbicacion.longitude,
-          });
-    } catch (e) {
-      print('Error obteniendo ubicación: $e');
-      miUbicacion = _randomPointEnBogota();
-    }
-  }
-
-  void _escucharUbicacionTiempoReal() {
-    const LocationSettings locationSettings = LocationSettings(
+  void _escucharUbicacion() {
+    const settings = LocationSettings(
       accuracy: LocationAccuracy.high,
-      distanceFilter: 200, // Se actualiza cada 10 metros
+      distanceFilter: 200,
     );
 
-    _positionStream = Geolocator.getPositionStream(
-      locationSettings: locationSettings,
-    );
-
-    _positionStream!.listen((Position position) async {
+    _stream = Geolocator.getPositionStream(locationSettings: settings).listen((
+      position,
+    ) async {
       miUbicacion = LatLng(position.latitude, position.longitude);
-
-      print(
-        '📍 Nueva ubicación: ${miUbicacion.latitude}, ${miUbicacion.longitude}',
-      );
-
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(currentUserUuid.value)
-          .update({
-            'latitud': miUbicacion.latitude,
-            'longitud': miUbicacion.longitude,
-          });
-
-      await _obtenerRuta();
-
-      // Refresca el mapa
+      ruta = await _controller.obtenerRuta(miUbicacion, puntoEncuentro);
       setState(() {});
     });
   }
 
-  Future<void> _obtenerRuta() async {
-    const apiKey = '5b3ce3597851110001cf624884acf4bb7f4849fda1b0d2d33d9cf0d1';
-    final url = Uri.parse(
-      'https://api.openrouteservice.org/v2/directions/foot-walking/geojson',
+  Future<void> _recalcularPunto() async {
+    miUbicacion = await _controller.obtenerMiUbicacion();
+    puntoEncuentro = MapaEncuentroModel.calcularPuntoMedio(
+      miUbicacion,
+      ubicacionOtraPersona,
     );
-
-    final body = jsonEncode({
-      "coordinates": [
-        [miUbicacion.longitude, miUbicacion.latitude],
-        [puntoEncuentro.longitude, puntoEncuentro.latitude],
-      ],
-    });
-
-    final headers = {
-      'Authorization': apiKey,
-      'Content-Type': 'application/json',
-    };
-
-    try {
-      final response = await http.post(url, headers: headers, body: body);
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        final List<dynamic> coordinates =
-            data['features'][0]['geometry']['coordinates'];
-
-        final List<LatLng> puntosRuta =
-            coordinates.map((coord) => LatLng(coord[1], coord[0])).toList();
-
-        setState(() {
-          rutaMiUbicacion = puntosRuta;
-        });
-      } else {
-        print('Error al obtener la ruta: ${response.statusCode}');
-      }
-    } catch (e) {
-      print('Excepción al obtener la ruta: $e');
-    }
-  }
-
-  LatLng calcularPuntoMedio(LatLng puntoA, LatLng puntoB) {
-    double latitudMedia = (puntoA.latitude + puntoB.latitude) / 2;
-    double longitudMedia = (puntoA.longitude + puntoB.longitude) / 2;
-    return LatLng(latitudMedia, longitudMedia);
-  }
-
-  Future<void> recalcularPuntoEncuentro() async {
-    await obtenerMiUbicacion();
-
-    puntoEncuentro = calcularPuntoMedio(miUbicacion, ubicacionOtraPersona);
-
-    await FirebaseFirestore.instance
-        .collection('chatsFlutter')
-        .doc(widget.chatId)
-        .update({
-          'latitudPuntoEncuentro': puntoEncuentro.latitude,
-          'longitudPuntoEncuentro': puntoEncuentro.longitude,
-        });
-
-    await _obtenerRuta();
-
+    await _controller.actualizarPuntoEncuentro(widget.chatId, puntoEncuentro);
+    ruta = await _controller.obtenerRuta(miUbicacion, puntoEncuentro);
     setState(() {});
-    print('Punto de encuentro recalculado');
   }
 
   @override
@@ -337,7 +164,6 @@ class _MapaEncuentroPageState extends State<MapaEncuentroPage> {
       body: Column(
         children: [
           Container(
-            color: Colors.white,
             padding: const EdgeInsets.all(12),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -359,22 +185,24 @@ class _MapaEncuentroPageState extends State<MapaEncuentroPage> {
                 IconButton(
                   icon: const Icon(Icons.refresh, color: Colors.blue),
                   tooltip: 'Recalcular punto de encuentro',
-                  onPressed: () async {
-                    await recalcularPuntoEncuentro();
-                  },
+                  onPressed: _recalcularPunto,
                 ),
               ],
             ),
           ),
           Expanded(
             child: FlutterMap(
-              options: MapOptions(center: puntoEncuentro, zoom: 14),
+              options: MapOptions(
+                center: puntoEncuentro,
+                zoom: 14,
+                minZoom: 8,
+                maxZoom: 18,
+              ),
               children: [
                 TileLayer(
                   urlTemplate:
                       'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
                   subdomains: const ['a', 'b', 'c'],
-                  userAgentPackageName: 'com.example.app',
                 ),
                 MarkerLayer(
                   markers: [
@@ -387,11 +215,11 @@ class _MapaEncuentroPageState extends State<MapaEncuentroPage> {
                     _crearMarker(puntoEncuentro, 'Encuentro', Colors.red),
                   ],
                 ),
-                if (rutaMiUbicacion.isNotEmpty)
+                if (ruta.isNotEmpty)
                   PolylineLayer(
                     polylines: [
                       Polyline(
-                        points: rutaMiUbicacion,
+                        points: ruta,
                         strokeWidth: 4.0,
                         color: Colors.blueAccent,
                       ),
@@ -407,11 +235,11 @@ class _MapaEncuentroPageState extends State<MapaEncuentroPage> {
 
   Marker _crearMarker(LatLng point, String label, Color color) {
     return Marker(
-      width: 80.0,
-      height: 80.0,
+      width: 80,
+      height: 80,
       point: point,
       builder:
-          (ctx) => Column(
+          (_) => Column(
             children: [
               Icon(Icons.location_pin, size: 40, color: color),
               Container(
@@ -424,12 +252,5 @@ class _MapaEncuentroPageState extends State<MapaEncuentroPage> {
             ],
           ),
     );
-  }
-
-  static LatLng _randomPointEnBogota() {
-    final random = Random();
-    final lat = 4.6 + random.nextDouble() * 0.2;
-    final lng = -74.15 + random.nextDouble() * 0.1;
-    return LatLng(lat, lng);
   }
 }

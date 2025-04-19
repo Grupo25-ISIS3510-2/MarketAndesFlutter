@@ -35,18 +35,20 @@ class ProductDetailController {
     }
 
     try {
-      final compradorRef =
-          FirebaseFirestore.instance.collection('users').doc(compradorUid);
-      final vendedorRef =
-          FirebaseFirestore.instance.collection('users').doc(sellerUUID);
+      final compradorRef = FirebaseFirestore.instance
+          .collection('users')
+          .doc(compradorUid);
+      final vendedorRef = FirebaseFirestore.instance
+          .collection('users')
+          .doc(sellerUUID);
 
       await FirebaseFirestore.instance.collection('chatsFlutter').add({
         'Razon': 'Comprador $name',
         'RazonUser': 'Vendedor $name',
         'latitud': 0,
         'longitud': 0,
-        'latitudPuntoEncuentro': 0,
-        'longitudPuntoEncuentro': 0,
+        'latitudPuntoEncuentro': 4.601635,
+        'longitudPuntoEncuentro': -74.065415,
         'uuidUser': compradorRef,
         'uuidOwner': vendedorRef,
       });

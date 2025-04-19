@@ -1,9 +1,7 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:proximity_sensor/proximity_sensor.dart';
-import 'package:screen_brightness/screen_brightness.dart';
-import '../../controllers/session_state_controller.dart'; // para el currentUserUuid
+import '../../controllers/chat_message_controller.dart';
+import '../../models/chat_message_model.dart';
+import '../../controllers/session_state_controller.dart';
 
 class ChatConversationPage extends StatefulWidget {
   final String chatId;
@@ -24,65 +22,34 @@ class ChatConversationPage extends StatefulWidget {
 }
 
 class _ChatConversationPageState extends State<ChatConversationPage> {
+  late ChatController _controller;
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
-
-  bool _proximityMode = false;
-  StreamSubscription<dynamic>? _proximitySubscription;
-  double _previousBrightness = 1.0;
 
   @override
   void initState() {
     super.initState();
-    _initBrightness();
-  }
-
-  Future<void> _initBrightness() async {
-    _previousBrightness = await ScreenBrightness().current;
-  }
-
-  void _toggleProximityMode(bool enabled) {
-    setState(() {
-      _proximityMode = enabled;
-    });
-
-    if (enabled) {
-      _startListeningProximity();
-    } else {
-      _stopListeningProximity();
-      _restoreBrightness();
-    }
-  }
-
-  void _startListeningProximity() {
-    _proximitySubscription = ProximitySensor.events.listen((int event) {
-      if (!_proximityMode) return;
-
-      if (event > 0) {
-        // Algo cerca, apaga pantalla
-        ScreenBrightness().setScreenBrightness(0.0);
-      } else {
-        // Nada cerca, restaura brillo
-        _restoreBrightness();
-      }
-    });
-  }
-
-  void _stopListeningProximity() {
-    _proximitySubscription?.cancel();
-    _proximitySubscription = null;
-  }
-
-  Future<void> _restoreBrightness() async {
-    await ScreenBrightness().setScreenBrightness(_previousBrightness);
+    _controller = ChatController(widget.chatId);
+    _controller.initBrightness();
   }
 
   @override
   void dispose() {
-    _stopListeningProximity();
+    _controller.dispose();
     _messageController.dispose();
     _scrollController.dispose();
     super.dispose();
+  }
+
+  void _toggleProximityMode(bool value) {
+    setState(() {
+      _controller.toggleProximityMode(value);
+    });
+  }
+
+  Future<void> _sendMessage() async {
+    await _controller.sendMessage(_messageController.text);
+    _messageController.clear();
   }
 
   @override
@@ -126,12 +93,9 @@ class _ChatConversationPageState extends State<ChatConversationPage> {
           ),
           Row(
             children: [
-              Icon(
-                Icons.visibility_off, // Ícono antiespías
-                color: Colors.white,
-              ),
+              const Icon(Icons.visibility_off, color: Colors.white),
               Switch(
-                value: _proximityMode,
+                value: _controller.isProximityMode,
                 activeColor: const Color(0xFFFDC500),
                 onChanged: _toggleProximityMode,
               ),
@@ -143,24 +107,14 @@ class _ChatConversationPageState extends State<ChatConversationPage> {
   }
 
   Widget _buildMessages() {
-    return StreamBuilder<QuerySnapshot>(
-      stream:
-          FirebaseFirestore.instance
-              .collection('chatsFlutter')
-              .doc(widget.chatId)
-              .collection('messages')
-              .orderBy('fecha', descending: false)
-              .snapshots(),
+    return StreamBuilder<List<ChatMessage>>(
+      stream: _controller.getMessagesStream(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
         }
 
-        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-          return const Center(child: Text('No hay mensajes aún.'));
-        }
-
-        final messages = snapshot.data!.docs;
+        final messages = snapshot.data ?? [];
 
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (_scrollController.hasClients) {
@@ -175,11 +129,8 @@ class _ChatConversationPageState extends State<ChatConversationPage> {
           padding: const EdgeInsets.all(16),
           itemCount: messages.length,
           itemBuilder: (context, index) {
-            final messageData = messages[index].data() as Map<String, dynamic>;
-            final messageText = messageData['message'] ?? '';
-            final senderUuid = messageData['uuid'] ?? '';
-
-            final isMine = senderUuid == currentUserUuid.value;
+            final message = messages[index];
+            final isMine = message.uuid == currentUserUuid.value;
 
             return Container(
               margin: const EdgeInsets.only(bottom: 12),
@@ -215,7 +166,7 @@ class _ChatConversationPageState extends State<ChatConversationPage> {
                         ),
                       ),
                       child: Text(
-                        messageText,
+                        message.message,
                         style: TextStyle(
                           color: isMine ? Colors.black : Colors.white,
                           fontSize: 14,
@@ -236,7 +187,7 @@ class _ChatConversationPageState extends State<ChatConversationPage> {
   Widget _buildMessageInput(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration(
         color: Colors.white,
         boxShadow: [
           BoxShadow(
@@ -279,22 +230,5 @@ class _ChatConversationPageState extends State<ChatConversationPage> {
         ],
       ),
     );
-  }
-
-  Future<void> _sendMessage() async {
-    final text = _messageController.text.trim();
-    if (text.isEmpty) return;
-
-    await FirebaseFirestore.instance
-        .collection('chatsFlutter')
-        .doc(widget.chatId)
-        .collection('messages')
-        .add({
-          'message': text,
-          'uuid': currentUserUuid.value,
-          'fecha': Timestamp.now(),
-        });
-
-    _messageController.clear();
   }
 }
