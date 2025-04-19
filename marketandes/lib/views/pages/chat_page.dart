@@ -145,6 +145,7 @@ class ChatPage extends StatelessWidget {
 
                                     if (confirmar ?? false) {
                                       await controller.cerrarChat(chat.id);
+
                                       ScaffoldMessenger.of(
                                         context,
                                       ).showSnackBar(

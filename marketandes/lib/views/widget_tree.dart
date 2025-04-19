@@ -9,7 +9,6 @@ import 'package:marketandes/views/pages/login_page.dart';
 import 'package:marketandes/views/widgets/navbar_widget.dart';
 import 'package:marketandes/controllers/session_state_controller.dart';
 
-// ... tus imports sin cambios
 class HomeWithNavbar extends StatefulWidget {
   final int selectedIndex;
 
@@ -21,9 +20,12 @@ class HomeWithNavbar extends StatefulWidget {
 
 class _HomeWithNavbarState extends State<HomeWithNavbar> {
   late int _selectedIndex;
-  bool _mostrarCuadro = false;
+  bool _mostrarCuadroComprador = false;
+  bool _mostrarCuadroVendedor = false;
   List<String> _productosPendientes = [];
   List<String> _productosPendientesVendedor = [];
+  List<DocumentSnapshot> _docsPendientesComprador = [];
+  List<DocumentSnapshot> _docsPendientesVendedor = [];
 
   final List<Widget> _pages = [HomePage(), AddPage(), ChatPage()];
 
@@ -81,9 +83,7 @@ class _HomeWithNavbarState extends State<HomeWithNavbar> {
   Future<void> _revisarComprasPendientes() async {
     try {
       final uid = currentUserUuid.value;
-      final now = DateTime.now();
-      final limite = now.subtract(const Duration(days: 5));
-
+      final limite = DateTime.now().subtract(const Duration(days: 5));
       final query =
           await FirebaseFirestore.instance
               .collection('chatsFlutter')
@@ -99,19 +99,21 @@ class _HomeWithNavbarState extends State<HomeWithNavbar> {
 
       if (query.docs.isNotEmpty) {
         final productos =
-            query.docs.map((doc) {
-              final razon = doc['Razon'] as String? ?? '';
-              return razon.replaceFirst('Comprador ', '');
-            }).toList();
-
+            query.docs
+                .map(
+                  (doc) =>
+                      (doc['Razon'] as String?)?.replaceFirst(
+                        'Comprador ',
+                        '',
+                      ) ??
+                      '',
+                )
+                .toList();
         setState(() {
-          _mostrarCuadro = true;
+          _mostrarCuadroComprador = true;
           _productosPendientes = productos;
+          _docsPendientesComprador = query.docs;
         });
-
-        for (var doc in query.docs) {
-          await doc.reference.update({'showed': true});
-        }
       }
     } catch (e) {
       debugPrint('Error al revisar compras pendientes: $e');
@@ -121,9 +123,7 @@ class _HomeWithNavbarState extends State<HomeWithNavbar> {
   Future<void> _revisarVentasPendientes() async {
     try {
       final uid = currentUserUuid.value;
-      final now = DateTime.now();
-      final limite = now.subtract(const Duration(days: 5));
-
+      final limite = DateTime.now().subtract(const Duration(days: 5));
       final query =
           await FirebaseFirestore.instance
               .collection('chatsFlutter')
@@ -134,28 +134,137 @@ class _HomeWithNavbarState extends State<HomeWithNavbar> {
                     .doc(uid),
               )
               .where('timeBegin', isLessThan: Timestamp.fromDate(limite))
-              .where('showed', isEqualTo: false)
+              .where('showedSeller', isEqualTo: false)
               .get();
 
       if (query.docs.isNotEmpty) {
         final productos =
-            query.docs.map((doc) {
-              final razon = doc['RazonUser'] as String? ?? '';
-              return razon.replaceFirst('Vendedor ', '');
-            }).toList();
-
+            query.docs
+                .map(
+                  (doc) =>
+                      (doc['RazonUser'] as String?)?.replaceFirst(
+                        'Vendedor ',
+                        '',
+                      ) ??
+                      '',
+                )
+                .toList();
         setState(() {
-          _mostrarCuadro = true;
+          _mostrarCuadroVendedor = true;
           _productosPendientesVendedor = productos;
+          _docsPendientesVendedor = query.docs;
         });
-
-        for (var doc in query.docs) {
-          await doc.reference.update({'showed': true});
-        }
       }
     } catch (e) {
       debugPrint('Error al revisar ventas pendientes: $e');
     }
+  }
+
+  Future<void> _marcarNoMostrarComprador() async {
+    for (var doc in _docsPendientesComprador) {
+      await doc.reference.update({'showed': true});
+    }
+    setState(() {
+      _mostrarCuadroComprador = false;
+    });
+  }
+
+  Future<void> _marcarNoMostrarVendedor() async {
+    for (var doc in _docsPendientesVendedor) {
+      await doc.reference.update({'showedSeller': true});
+    }
+    setState(() {
+      _mostrarCuadroVendedor = false;
+    });
+  }
+
+  Widget _buildCuadroPendiente({
+    required String title,
+    required IconData icon,
+    required List<String> productos,
+    required VoidCallback onCerrar,
+    required VoidCallback onNoMostrar,
+  }) {
+    return Positioned(
+      bottom: 100,
+      left: 20,
+      right: 20,
+      child: Card(
+        color: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        elevation: 8,
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(icon, color: const Color(0xFF00296B)),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      title,
+                      style: const TextStyle(
+                        color: Colors.black,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              ...productos.map(
+                (p) => Padding(
+                  padding: const EdgeInsets.only(bottom: 4),
+                  child: Text(
+                    "• $p",
+                    style: const TextStyle(color: Colors.black),
+                    softWrap: true,
+                    overflow: TextOverflow.clip,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 8,
+                runSpacing: 4,
+                alignment: WrapAlignment.end,
+                children: [
+                  TextButton(
+                    onPressed: onCerrar,
+                    child: const Text(
+                      "Cerrar",
+                      style: TextStyle(color: Colors.red),
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: onNoMostrar,
+                    child: const Text(
+                      "No mostrar nuevamente",
+                      style: TextStyle(color: Color(0xFF00296B)),
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () {
+                      setState(() {
+                        _selectedIndex = 2;
+                        onCerrar();
+                      });
+                    },
+                    child: const Text(
+                      "Ver chats",
+                      style: TextStyle(color: Color(0xFF00296B)),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -196,12 +305,11 @@ class _HomeWithNavbarState extends State<HomeWithNavbar> {
             ListTile(
               leading: const Icon(Icons.map, color: Colors.black),
               title: const Text("Mapa"),
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const MapPage()),
-                );
-              },
+              onTap:
+                  () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const MapPage()),
+                  ),
             ),
             ListTile(
               leading: const Icon(Icons.exit_to_app, color: Colors.red),
@@ -214,107 +322,21 @@ class _HomeWithNavbarState extends State<HomeWithNavbar> {
       body: Stack(
         children: [
           IndexedStack(index: _selectedIndex, children: _pages),
-          if (_mostrarCuadro &&
-              (_productosPendientes.isNotEmpty ||
-                  _productosPendientesVendedor.isNotEmpty))
-            Positioned(
-              bottom: 100,
-              left: 20,
-              right: 20,
-              child: Card(
-                color: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                elevation: 8,
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      if (_productosPendientes.isNotEmpty) ...[
-                        Row(
-                          children: const [
-                            Icon(Icons.shopping_cart, color: Color(0xFF00296B)),
-                            SizedBox(width: 10),
-                            Expanded(
-                              child: Text(
-                                "¡No dejes escapar tu compra!",
-                                style: TextStyle(
-                                  color: Color.fromARGB(255, 0, 0, 0),
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 10),
-                        ..._productosPendientes.map(
-                          (p) => Text(
-                            "• $p",
-                            style: TextStyle(
-                              color: Color.fromARGB(255, 0, 0, 0),
-                            ),
-                          ),
-                        ),
-                      ],
-                      if (_productosPendientesVendedor.isNotEmpty) ...[
-                        Row(
-                          children: const [
-                            Icon(Icons.store, color: Color(0xFF00296B)),
-                            SizedBox(width: 10),
-                            Expanded(
-                              child: Text(
-                                "¡No dejes escapar tu venta!",
-                                style: TextStyle(
-                                  color: Color.fromARGB(255, 0, 0, 0),
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 10),
-                        ..._productosPendientesVendedor.map(
-                          (p) => Text(
-                            "• $p",
-                            style: TextStyle(
-                              color: Color.fromARGB(255, 0, 0, 0),
-                            ),
-                          ),
-                        ),
-                      ],
-                      const SizedBox(height: 10),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                          TextButton(
-                            onPressed:
-                                () => setState(() => _mostrarCuadro = false),
-                            child: const Text(
-                              "Cerrar",
-                              style: TextStyle(color: Colors.red),
-                            ),
-                          ),
-                          TextButton(
-                            onPressed: () {
-                              setState(() {
-                                _selectedIndex = 2;
-                                _mostrarCuadro = false;
-                              });
-                            },
-                            child: const Text(
-                              "Ver chats",
-                              style: TextStyle(color: Color(0xFF00296B)),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ),
+          if (_mostrarCuadroComprador)
+            _buildCuadroPendiente(
+              title: "¡No dejes escapar tu compra!",
+              icon: Icons.shopping_cart,
+              productos: _productosPendientes,
+              onCerrar: () => setState(() => _mostrarCuadroComprador = false),
+              onNoMostrar: _marcarNoMostrarComprador,
+            ),
+          if (_mostrarCuadroVendedor)
+            _buildCuadroPendiente(
+              title: "¡No dejes escapar tu venta!",
+              icon: Icons.store,
+              productos: _productosPendientesVendedor,
+              onCerrar: () => setState(() => _mostrarCuadroVendedor = false),
+              onNoMostrar: _marcarNoMostrarVendedor,
             ),
         ],
       ),

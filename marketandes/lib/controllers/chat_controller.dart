@@ -6,7 +6,31 @@ class ChatController {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   Future<void> cerrarChat(String chatId) async {
+    await anadirTiempoRegistro(chatId);
     await _firestore.collection('chatsFlutter').doc(chatId).delete();
+  }
+
+  Future<void> anadirTiempoRegistro(String chatId) async {
+    final firestore = FirebaseFirestore.instance;
+
+    try {
+      // Obtener el initTime del chat original
+      final doc = await firestore.collection('chatsFlutter').doc(chatId).get();
+
+      if (doc.exists && doc.data()!.containsKey('initTime')) {
+        final initTime = doc['initTime'];
+
+        await firestore.collection('chatsCerrados').add({
+          'chatId': chatId,
+          'timeOpened': initTime,
+          'timeClosed': FieldValue.serverTimestamp(),
+        });
+      } else {
+        throw Exception("initTime no encontrado para el chat $chatId");
+      }
+    } catch (e) {
+      print("Error al registrar tiempos del chat: $e");
+    }
   }
 
   Stream<List<ChatModel>> getChats(String userId) {

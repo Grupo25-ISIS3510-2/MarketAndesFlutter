@@ -52,6 +52,7 @@ class ProductDetailController {
         'uuidUser': compradorRef,
         'uuidOwner': vendedorRef,
         'timeBegin': FieldValue.serverTimestamp(),
+        'initTime': FieldValue.serverTimestamp(),
         'showed': false,
       });
 
