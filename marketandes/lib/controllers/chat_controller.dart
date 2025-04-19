@@ -1,10 +1,15 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:rxdart/rxdart.dart'; // <-- Este es el importante
 import '../models/chat_model.dart';
 
 class ChatController {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  Stream<List<ChatModel>> getChats(String userId) async* {
+  Future<void> cerrarChat(String chatId) async {
+    await _firestore.collection('chatsFlutter').doc(chatId).delete();
+  }
+
+  Stream<List<ChatModel>> getChats(String userId) {
     final userRef = _firestore.doc('/users/$userId');
 
     final ownerStream =
@@ -19,13 +24,14 @@ class ChatController {
             .where('uuidUser', isEqualTo: userRef)
             .snapshots();
 
-    await for (final ownerSnapshot in ownerStream) {
-      final userSnapshot = await userStream.first;
-
-      final chats = [...ownerSnapshot.docs, ...userSnapshot.docs];
+    return Rx.combineLatest2(ownerStream, userStream, (
+      QuerySnapshot ownerSnapshot,
+      QuerySnapshot userSnapshot,
+    ) async {
+      final allDocs = [...ownerSnapshot.docs, ...userSnapshot.docs];
 
       final chatModels = await Future.wait(
-        chats.map((chat) async {
+        allDocs.map((chat) async {
           final uuidOwnerRef = chat['uuidOwner'] as DocumentReference;
           final uuidUserRef = chat['uuidUser'] as DocumentReference;
           final otherUserRef =
@@ -41,7 +47,7 @@ class ChatController {
         }),
       );
 
-      yield chatModels;
-    }
+      return chatModels;
+    }).asyncMap((future) => future); // <-- Muy importante: espera el Future
   }
 }

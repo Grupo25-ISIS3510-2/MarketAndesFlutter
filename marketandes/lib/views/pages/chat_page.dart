@@ -108,6 +108,55 @@ class ChatPage extends StatelessWidget {
                                   );
                                 },
                               ),
+                              if (chat
+                                  .esComprador) // <-- AQUÍ ESTÁ CORRECTAMENTE DENTRO DE LA LISTA
+                                IconButton(
+                                  color: Colors.red,
+                                  icon: const Icon(Icons.close),
+                                  onPressed: () async {
+                                    final confirmar = await showDialog<bool>(
+                                      context: context,
+                                      builder:
+                                          (context) => AlertDialog(
+                                            title: const Text('Cerrar chat'),
+                                            content: const Text(
+                                              '¿Estás seguro de que deseas cerrar este chat?',
+                                            ),
+                                            actions: [
+                                              TextButton(
+                                                onPressed:
+                                                    () => Navigator.pop(
+                                                      context,
+                                                      false,
+                                                    ),
+                                                child: const Text('Cancelar'),
+                                              ),
+                                              TextButton(
+                                                onPressed:
+                                                    () => Navigator.pop(
+                                                      context,
+                                                      true,
+                                                    ),
+                                                child: const Text('Cerrar'),
+                                              ),
+                                            ],
+                                          ),
+                                    );
+
+                                    if (confirmar ?? false) {
+                                      await controller.cerrarChat(chat.id);
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        const SnackBar(
+                                          content: Text(
+                                            'Chat cerrado exitosamente.',
+                                          ),
+                                        ),
+                                      );
+                                    }
+                                  },
+                                ),
                             ],
                           ),
                         );
