@@ -63,6 +63,10 @@ class ChatController {
           'uuid': currentUserUuid.value,
           'fecha': Timestamp.now(),
         });
+    await FirebaseFirestore.instance
+        .collection('chatsFlutter')
+        .doc(chatId)
+        .update({'timeBegin': Timestamp.now(), 'showed': false});
   }
 
   Stream<List<ChatMessage>> getMessagesStream() {

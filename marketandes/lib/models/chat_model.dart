@@ -10,9 +10,12 @@ class ChatModel {
     required this.userData,
     required this.currentUserId,
   });
-
+  bool get esComprador => chat['uuidUser'].id == currentUserId;
+  String get fechaInicio => chat['timeBegin'];
+  String get showed => chat['showed'];
   String get razon {
     final isOwner = chat['uuidOwner'].id == currentUserId;
+
     return isOwner
         ? chat['Razon'] ?? 'Sin razón'
         : chat['RazonUser'] ?? 'Sin razón';

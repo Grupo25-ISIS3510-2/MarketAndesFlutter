@@ -51,6 +51,9 @@ class ProductDetailController {
         'longitudPuntoEncuentro': -74.065415,
         'uuidUser': compradorRef,
         'uuidOwner': vendedorRef,
+        'timeBegin': FieldValue.serverTimestamp(),
+        'initTime': FieldValue.serverTimestamp(),
+        'showed': false,
       });
 
       print('Chat creado exitosamente');
