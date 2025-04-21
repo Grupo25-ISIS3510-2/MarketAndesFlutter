@@ -1,8 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:marketandes/controllers/session_state_controller.dart';
-import 'package:marketandes/views/widget_tree.dart';
-import 'package:marketandes/views/pages/home_page.dart';
+import 'package:marketandes/controllers/add_product_controller.dart';
 
 class AddPage extends StatefulWidget {
   const AddPage({super.key});
@@ -12,111 +9,31 @@ class AddPage extends StatefulWidget {
 }
 
 class _AddPageState extends State<AddPage> {
-  final TextEditingController titleController = TextEditingController();
-  final TextEditingController descriptionController = TextEditingController();
-  final TextEditingController priceController = TextEditingController();
-  final TextEditingController imageUrlController = TextEditingController();
+  late AddProductController controller;
 
-  bool _isSubmitting = false;
-  String? selectedCategory;
+  final titleController = TextEditingController();
+  final descriptionController = TextEditingController();
+  final priceController = TextEditingController();
+  final imageUrlController = TextEditingController();
 
-  final List<String> categories = [
-    "Arte",
-    "Física",
-    "Utensilios",
-    "Diseño",
-    "Lenguas",
-    "Ingeniería",
-    "Libros",
-    "Medicina",
-    "Tecnología",
-    "Administración",
-    "Software",
-    "Música",
-    "Arquitectura",
-    "Psicología",
-    "Educación",
-    "Química",
-    "Economía",
-    "Comunicación",
-    "Derecho",
-    "Inglés",
+  final categories = [
+    "Arte", "Física", "Utensilios", "Diseño", "Lenguas",
+    "Ingeniería", "Libros", "Medicina", "Tecnología",
+    "Administración", "Software", "Música", "Arquitectura",
+    "Psicología", "Educación", "Química", "Economía",
+    "Comunicación", "Derecho", "Inglés",
   ];
 
-  void _submitProduct() async {
-    if (titleController.text.isEmpty ||
-        descriptionController.text.isEmpty ||
-        priceController.text.isEmpty ||
-        imageUrlController.text.isEmpty ||
-        selectedCategory == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Por favor completa todos los campos")),
-      );
-      return;
-    }
-
-    int? price = int.tryParse(priceController.text);
-    if (price == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("El precio debe ser un número válido")),
-      );
-      return;
-    }
-
-    setState(() {
-      _isSubmitting = true;
-    });
-
-    try {
-      final uid = currentUserUuid.value;
-      final userDoc =
-          await FirebaseFirestore.instance.collection('users').doc(uid).get();
-      final fullName = userDoc.data()?['fullName'] ?? "Vendedor Desconocido";
-
-      final productsCollection = FirebaseFirestore.instance.collection(
-        'products',
-      );
-      final productData = {
-        'name': titleController.text.trim(),
-        'description': descriptionController.text.trim(),
-        'price': price,
-        'imageURL': imageUrlController.text.trim(),
-        'category': selectedCategory,
-        'sellerID': fullName,
-        'sellerRating': 5,
-        'uidSeller': uid,
-        'timestamp': FieldValue.serverTimestamp(),
-      };
-
-      await productsCollection.add(productData);
-
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Producto publicado exitosamente')),
-      );
-
-      _navigateToHome();
-    } catch (e) {
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error al publicar el producto: $e')),
-      );
-    } finally {
-      if (!mounted) return;
-
-      setState(() {
-        _isSubmitting = false;
-      });
-    }
-  }
-
-  void _navigateToHome() {
-    Navigator.pushAndRemoveUntil(
-      context,
-      MaterialPageRoute(builder: (context) => const HomeWithNavbar()),
-      (Route<dynamic> route) => false,
+  @override
+  void initState() {
+    super.initState();
+    controller = AddProductController(
+      context: context,
+      refreshUI: () => setState(() {}),
+      titleController: titleController,
+      descriptionController: descriptionController,
+      priceController: priceController,
+      imageUrlController: imageUrlController,
     );
   }
 
@@ -142,27 +59,15 @@ class _AddPageState extends State<AddPage> {
 
             const SizedBox(height: 20),
             _buildLabel("Adjunta el URL de las imágenes del producto"),
-            _buildTextField(
-              imageUrlController,
-              "Pega aquí el enlace de la imagen",
-            ),
+            _buildTextField(imageUrlController, "Pega aquí el enlace de la imagen"),
 
             const SizedBox(height: 20),
             _buildLabel("Descripción corta del producto"),
-            _buildTextField(
-              descriptionController,
-              "Escribe aquí la descripción...",
-              maxLines: 5,
-            ),
+            _buildTextField(descriptionController, "Escribe aquí la descripción...", maxLines: 5),
 
             const SizedBox(height: 20),
             _buildLabel("Precio del producto"),
-            _buildTextField(
-              priceController,
-              "Ingresa el precio",
-              keyboardType: TextInputType.number,
-              prefixText: "\$ ",
-            ),
+            _buildTextField(priceController, "Ingresa el precio", keyboardType: TextInputType.number, prefixText: "\$ "),
 
             const SizedBox(height: 20),
             _buildLabel("Categoría del producto"),
@@ -174,21 +79,16 @@ class _AddPageState extends State<AddPage> {
                 border: Border.all(color: Colors.grey.shade300),
               ),
               child: DropdownButtonFormField<String>(
-                value: selectedCategory,
+                value: controller.selectedCategory,
                 hint: const Text("Selecciona una categoría"),
                 decoration: const InputDecoration(border: InputBorder.none),
-                items:
-                    categories.map((String category) {
-                      return DropdownMenuItem<String>(
-                        value: category,
-                        child: Text(category),
-                      );
-                    }).toList(),
-                onChanged: (String? value) {
-                  setState(() {
-                    selectedCategory = value;
-                  });
-                },
+                items: categories.map((category) {
+                  return DropdownMenuItem<String>(
+                    value: category,
+                    child: Text(category),
+                  );
+                }).toList(),
+                onChanged: controller.setCategory,
               ),
             ),
 
@@ -204,20 +104,17 @@ class _AddPageState extends State<AddPage> {
                       ),
                       padding: const EdgeInsets.symmetric(vertical: 14),
                     ),
-                    onPressed: _isSubmitting ? null : _submitProduct,
-                    child:
-                        _isSubmitting
-                            ? const CircularProgressIndicator(
+                    onPressed: controller.isSubmitting ? null : controller.submitProduct,
+                    child: controller.isSubmitting
+                        ? const CircularProgressIndicator(color: Colors.black)
+                        : const Text(
+                            "Publicar",
+                            style: TextStyle(
                               color: Colors.black,
-                            )
-                            : const Text(
-                              "Publicar",
-                              style: TextStyle(
-                                color: Colors.black,
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                              ),
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
                             ),
+                          ),
                   ),
                 ),
                 const SizedBox(width: 20),
@@ -230,7 +127,7 @@ class _AddPageState extends State<AddPage> {
                       ),
                       padding: const EdgeInsets.symmetric(vertical: 14),
                     ),
-                    onPressed: _navigateToHome,
+                    onPressed: controller.cancel,
                     child: const Text(
                       "Cancelar",
                       style: TextStyle(
