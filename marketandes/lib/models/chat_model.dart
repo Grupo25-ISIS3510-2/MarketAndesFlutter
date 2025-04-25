@@ -1,30 +1,54 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class ChatModel {
-  final DocumentSnapshot chat;
-  final DocumentSnapshot userData;
+  final Map<String, dynamic> chatData;
+  final Map<String, dynamic> userData;
   final String currentUserId;
 
   ChatModel({
-    required this.chat,
+    required this.chatData,
     required this.userData,
     required this.currentUserId,
   });
-  bool get esComprador => chat['uuidUser'].id == currentUserId;
-  String get fechaInicio => chat['timeBegin'];
-  String get showed => chat['showed'];
-  String get razon {
-    final isOwner = chat['uuidOwner'].id == currentUserId;
 
+  String get _uuidUserId {
+    final raw = chatData['uuidUser'];
+    if (raw is DocumentReference) return raw.id;
+    if (raw is Map && raw.containsKey('id')) return raw['id'];
+    return '';
+  }
+
+  String get _uuidOwnerId {
+    final raw = chatData['uuidOwner'];
+    if (raw is DocumentReference) return raw.id;
+    if (raw is Map && raw.containsKey('id')) return raw['id'];
+    return '';
+  }
+
+  bool get esComprador => _uuidUserId == currentUserId;
+
+  String get fechaInicio {
+    final value = chatData['timeBegin'];
+    if (value is Timestamp) return value.toDate().toIso8601String();
+    if (value is String) return value;
+    return '';
+  }
+
+  String get showed {
+    final value = chatData['showed'];
+    if (value is Timestamp) return value.toDate().toIso8601String();
+    if (value is String) return value;
+    return '';
+  }
+
+  String get razon {
+    final isOwner = _uuidOwnerId == currentUserId;
     return isOwner
-        ? chat['Razon'] ?? 'Sin razón'
-        : chat['RazonUser'] ?? 'Sin razón';
+        ? chatData['Razon'] ?? 'Sin razón'
+        : chatData['RazonUser'] ?? 'Sin razón';
   }
 
   String get nombreUsuario => userData['fullName'] ?? 'Sin nombre';
-
-  String get id => chat.id;
-
-  String get userPhotoUrl =>
-      'https://randomuser.me/api/portraits/men/1.jpg'; // fijo por ahora
+  String get id => chatData['id'];
+  String get userPhotoUrl => 'https://randomuser.me/api/portraits/men/1.jpg';
 }
