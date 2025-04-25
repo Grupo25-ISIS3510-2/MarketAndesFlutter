@@ -60,113 +60,51 @@ class ChatController {
     _stopListeningProximity();
   }
 
-  // ✉️ Enviar mensaje (con soporte offline)
-Future<void> sendMessage(String message) async {
-  if (message.trim().isEmpty) return;
+  // ✉️ Enviar mensaje
+  Future<void> sendMessage(String message) async {
+    if (message.trim().isEmpty) return;
 
-  final newMessage = {
-    'message': message.trim(),
-    'uuid': userId,
-    'fecha': Timestamp.now(),
-    'showed': false,
-  };
+    final newMessage = {
+      'message': message.trim(),
+      'uuid': userId,
+      'fecha': Timestamp.now(),
+      'showed': false,
+    };
 
-  final isBuyer = await _isBuyer();
-  final subcollection = isBuyer ? 'lastMessageBuyer' : 'lastMessageSelller';
+    final isBuyer = await _isBuyer();
+    final subcollection = isBuyer ? 'lastMessageBuyer' : 'lastMessageSelller';
 
-  // Actualización en la colección principal (información común para todos)
-  await _firestore.collection('chatsFlutter').doc(chatId).update({
-    'timeBegin': Timestamp.now(),
-    'showed': false,
-  });
+    final msg = ChatMessage(
+      message: message.trim(),
+      uuid: userId,
+      fecha: DateTime.now(),
+      isQueued: false,
+    );
 
-  final lastDocRef = _firestore
-      .collection('chatsFlutter')
-      .doc(chatId)
-      .collection(subcollection)
-      .doc('last');
+    await _addMessageToLocal(msg);
 
-  // Intentar update, y fallback a set si falla
-  try {
-    await lastDocRef.update(newMessage);
-  } catch (_) {
-    await lastDocRef.set(newMessage);
-  }
-
-  // Crear el objeto de mensaje localmente
-  final msg = ChatMessage(
-    message: message.trim(),
-    uuid: userId,
-    fecha: DateTime.now(),
-    isQueued: true, // Marcamos como en espera (colocado en cola)
-  );
-
-  // Guardar el mensaje localmente
-  await _addMessageToLocal(msg);
-
-  // Intentar enviar el mensaje, con fallback en caso de error
-  try {
-    await _sendQueuedMessages();
-  } catch (e) {
-    print('⚠️ Error al enviar mensaje. Guardado localmente.');
-    // Aquí no es necesario hacer nada más porque el mensaje ya está marcado como "en espera"
-  }
-}
-
-
-Future<void> _sendQueuedMessages() async {
-  final prefs = await SharedPreferences.getInstance();
-  final currentRaw = prefs.getString(_localKey);
-  if (currentRaw == null) return;
-
-  final localMsgs = List<Map<String, dynamic>>.from(jsonDecode(currentRaw));
-  if (localMsgs.isEmpty) return;
-
-  final isBuyer = await _isBuyer();
-  final subcollection = isBuyer ? 'lastMessageBuyer' : 'lastMessageSelller';
-  final lastDocRef = _firestore
-      .collection('chatsFlutter')
-      .doc(chatId)
-      .collection(subcollection)
-      .doc('last');
-
-  bool allSent = true;
-
-  for (var map in localMsgs) {
     try {
-      final msg = ChatMessage.fromMap(map);
-
-      final msgData = {
-        'message': msg.message,
-        'uuid': msg.uuid,
-        'fecha': Timestamp.fromDate(msg.fecha),
-        'showed': false,
-      };
-
       await _firestore.collection('chatsFlutter').doc(chatId).update({
         'timeBegin': Timestamp.now(),
         'showed': false,
       });
 
-      try {
-        await lastDocRef.update(msgData);
-      } catch (_) {
-        await lastDocRef.set(msgData);
-      }
+      final lastDocRef = _firestore
+          .collection('chatsFlutter')
+          .doc(chatId)
+          .collection(subcollection)
+          .doc('last');
 
-      print('📤 Mensaje enviado: ${msg.message}');
-    } catch (e) {
-      allSent = false;
-      print('❌ Error al enviar mensaje local: $e');
+      try {
+        await lastDocRef.update(newMessage);
+      } catch (_) {
+        await lastDocRef.set(newMessage);
+      }
+    } catch (_) {
+      print('📡 Sin conexión. Guardando mensaje pendiente...');
+      await _storeOfflineMessage(newMessage, subcollection);
     }
   }
-
-  // Solo limpiamos la cola si todos fueron enviados
-  if (allSent) {
-    await prefs.remove(_localKey);
-  }
-}
-
 
   // 💾 Guardar mensaje local
   Future<void> _addMessageToLocal(ChatMessage message) async {
@@ -181,28 +119,30 @@ Future<void> _sendQueuedMessages() async {
     await prefs.setString(_localKey, jsonEncode(localMsgs));
   }
 
-  // 📨 Cargar mensajes locales y añadir nuevo si existe en Firebase
+  // 📨 Cargar mensajes locales y nuevos desde Firebase
   Future<List<ChatMessage>> loadMessages() async {
     final prefs = await SharedPreferences.getInstance();
     final currentRaw = prefs.getString(_localKey);
     List<ChatMessage> localMessages = [];
 
     if (currentRaw != null) {
-      localMessages = List<Map<String, dynamic>>.from(jsonDecode(currentRaw))
-          .map((m) => ChatMessage.fromMap(m))
-          .toList();
+      localMessages =
+          List<Map<String, dynamic>>.from(
+            jsonDecode(currentRaw),
+          ).map((m) => ChatMessage.fromMap(m)).toList();
     }
 
     try {
       final isBuyer = await _isBuyer();
       final sub = isBuyer ? 'lastMessageSelller' : 'lastMessageBuyer';
 
-      final snapshot = await _firestore
-          .collection('chatsFlutter')
-          .doc(chatId)
-          .collection(sub)
-          .doc('last')
-          .get();
+      final snapshot =
+          await _firestore
+              .collection('chatsFlutter')
+              .doc(chatId)
+              .collection(sub)
+              .doc('last')
+              .get();
 
       if (snapshot.exists) {
         final data = snapshot.data()!;
@@ -213,7 +153,7 @@ Future<void> _sendQueuedMessages() async {
             message: data['message'],
             uuid: data['uuid'],
             fecha: (data['fecha'] as Timestamp).toDate(),
-            isQueued: false,
+            isQueued: false
           );
 
           localMessages.add(newMessage);
@@ -236,5 +176,59 @@ Future<void> _sendQueuedMessages() async {
   Future<bool> _isBuyer() async {
     final doc = await _firestore.collection('chatsFlutter').doc(chatId).get();
     return (doc['uuidUser'] as DocumentReference).id == userId;
+  }
+
+  // 📦 Guardar mensajes pendientes offline
+  Future<void> _storeOfflineMessage(
+      Map<String, dynamic> message, String subcollection) async {
+    final prefs = await SharedPreferences.getInstance();
+    final key = 'pendingMessages_${chatId}_$subcollection';
+
+    final raw = prefs.getString(key);
+    final List<Map<String, dynamic>> pending =
+        raw != null ? List<Map<String, dynamic>>.from(jsonDecode(raw)) : [];
+
+    pending.add(message);
+    await prefs.setString(key, jsonEncode(pending));
+  }
+
+  // 🔁 Reenviar mensajes pendientes cuando haya conexión
+  Future<void> resendPendingMessages() async {
+    final prefs = await SharedPreferences.getInstance();
+    final isBuyer = await _isBuyer();
+    final subcollection = isBuyer ? 'lastMessageBuyer' : 'lastMessageSelller';
+    final key = 'pendingMessages_${chatId}_$subcollection';
+    final raw = prefs.getString(key);
+
+    if (raw == null) return;
+
+    final List<Map<String, dynamic>> pending =
+        List<Map<String, dynamic>>.from(jsonDecode(raw));
+
+    final lastDocRef = _firestore
+        .collection('chatsFlutter')
+        .doc(chatId)
+        .collection(subcollection)
+        .doc('last');
+
+    for (final msg in pending) {
+      try {
+        await _firestore.collection('chatsFlutter').doc(chatId).update({
+          'timeBegin': Timestamp.now(),
+          'showed': false,
+        });
+
+        try {
+          await lastDocRef.update(msg);
+        } catch (_) {
+          await lastDocRef.set(msg);
+        }
+      } catch (e) {
+        print('❌ No se pudo reenviar el mensaje pendiente: $e');
+        return; // Detener en caso de que no haya conexión aún
+      }
+    }
+
+    await prefs.remove(key); // Limpiar cola si ya se enviaron todos
   }
 }

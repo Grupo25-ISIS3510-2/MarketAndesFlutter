@@ -125,88 +125,86 @@ class _ChatConversationPageState extends State<ChatConversationPage> {
           }
         });
 
-        return ListView.builder(
-          controller: _scrollController,
-          padding: const EdgeInsets.all(16),
-          itemCount: messages.length,
-          itemBuilder: (context, index) {
-            final message = messages[index];
-            final isMine = message.uuid == currentUserUuid.value;
+return ListView.builder(
+  controller: _scrollController,
+  padding: const EdgeInsets.all(16),
+  itemCount: messages.length,
+  itemBuilder: (context, index) {
+    final message = messages[index];
+    final isMine = message.uuid == currentUserUuid.value;
 
-            return Container(
-              margin: const EdgeInsets.only(bottom: 12),
-              child: Row(
-                mainAxisAlignment:
-                    isMine ? MainAxisAlignment.end : MainAxisAlignment.start,
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  if (!isMine)
-                    Padding(
-                      padding: const EdgeInsets.only(right: 8.0),
-                      child: CircleAvatar(
-                        radius: 15,
-                        backgroundImage: NetworkImage(widget.userPhotoUrl),
-                      ),
-                    ),
-                  Flexible(
-                    child: Stack(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            vertical: 12,
-                            horizontal: 16,
-                          ),
-                          decoration: BoxDecoration(
-                            color: isMine
-                                ? const Color(0xFFFDC500)
-                                : const Color(0xFF00296B),
-                            borderRadius: BorderRadius.only(
-                              topLeft: Radius.circular(isMine ? 16 : 0),
-                              topRight: Radius.circular(isMine ? 0 : 16),
-                              bottomLeft: const Radius.circular(16),
-                              bottomRight: const Radius.circular(16),
-                            ),
-                          ),
-                          child: Text(
-                            message.message,
-                            style: TextStyle(
-                              color: isMine ? Colors.black : Colors.white,
-                              fontSize: 14,
-                            ),
-                          ),
-                        ),
-                        if (isMine && message.isQueued)
-                            Positioned(
-                              bottom: -10,
-                              right: 8,
-                              child: Row(
-                                children: const [
-                                  Icon(
-                                    Icons.schedule,
-                                    size: 14,
-                                    color: Colors.black54,
-                                  ),
-                                  SizedBox(width: 4),
-                                  Text(
-                                    'Enviando...',
-                                    style: TextStyle(
-                                      fontSize: 10,
-                                      color: Colors.black54,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-
-                      ],
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        mainAxisAlignment:
+            isMine ? MainAxisAlignment.end : MainAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          if (!isMine)
+            Padding(
+              padding: const EdgeInsets.only(right: 8.0),
+              child: CircleAvatar(
+                radius: 15,
+                backgroundImage: NetworkImage(widget.userPhotoUrl),
+              ),
+            ),
+          Flexible(
+            child: Column(
+              crossAxisAlignment:
+                  isMine ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 12,
+                    horizontal: 16,
+                  ),
+                  decoration: BoxDecoration(
+                    color: isMine
+                        ? const Color(0xFFFDC500)
+                        : const Color(0xFF00296B),
+                    borderRadius: BorderRadius.only(
+                      topLeft: Radius.circular(isMine ? 16 : 0),
+                      topRight: Radius.circular(isMine ? 0 : 16),
+                      bottomLeft: const Radius.circular(16),
+                      bottomRight: const Radius.circular(16),
                     ),
                   ),
-                  if (isMine) const SizedBox(width: 40),
-                ],
-              ),
-            );
-          },
-        );
+                  child: Text(
+                    message.message,
+                    style: TextStyle(
+                      color: isMine ? Colors.black : Colors.white,
+                      fontSize: 14,
+                    ),
+                  ),
+                ),
+                if (isMine && message.isQueued)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4, right: 8),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: const [
+                          Icon(Icons.schedule, size: 14, color: Colors.black54),
+                          SizedBox(width: 4),
+                          Text(
+                            'Enviando...',
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: Colors.black54,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+              ],
+            ),
+          ),
+          if (isMine) const SizedBox(width: 40),
+        ],
+      ),
+    );
+  },
+);
       },
     );
   }
