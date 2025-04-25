@@ -42,6 +42,8 @@ class ProductDetailController {
           .collection('users')
           .doc(sellerUUID);
 
+      final now = Timestamp.now();
+
       await FirebaseFirestore.instance.collection('chatsFlutter').add({
         'Razon': 'Comprador $name',
         'RazonUser': 'Vendedor $name',
@@ -56,7 +58,10 @@ class ProductDetailController {
         'showed': false,
       });
 
-      print('Chat creado exitosamente');
+      await compradorRef.update({'lastUpdate': now});
+      await vendedorRef.update({'lastUpdate': now});
+
+      print('Chat creado exitosamente y lastUpdate actualizado');
     } catch (error) {
       print('Error al crear el chat: $error');
     }
