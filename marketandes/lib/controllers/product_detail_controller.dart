@@ -42,21 +42,50 @@ class ProductDetailController {
           .collection('users')
           .doc(sellerUUID);
 
-      await FirebaseFirestore.instance.collection('chatsFlutter').add({
-        'Razon': 'Comprador $name',
-        'RazonUser': 'Vendedor $name',
-        'latitud': 0,
-        'longitud': 0,
-        'latitudPuntoEncuentro': 4.601635,
-        'longitudPuntoEncuentro': -74.065415,
-        'uuidUser': compradorRef,
-        'uuidOwner': vendedorRef,
-        'timeBegin': FieldValue.serverTimestamp(),
-        'initTime': FieldValue.serverTimestamp(),
-        'showed': false,
-      });
+      final now = Timestamp.now();
 
-      print('Chat creado exitosamente');
+      //  Crear el chat
+      final chatRef = await FirebaseFirestore.instance
+          .collection('chatsFlutter')
+          .add({
+            'Razon': 'Comprador $name',
+            'RazonUser': 'Vendedor $name',
+            'latitud': 0,
+            'longitud': 0,
+            'latitudPuntoEncuentro': 4.601635,
+            'longitudPuntoEncuentro': -74.065415,
+            'uuidUser': compradorRef,
+            'uuidOwner': vendedorRef,
+            'timeBegin': now,
+            'initTime': now,
+            'showed': false,
+          });
+
+      // Crear subcolecciones lastMessageSelller y lastMessageBuyer
+      final initialMessage = {
+        'message': '',
+        'uuid':
+            compradorUid, // Puede ser comprador o vendedor, aquí ponemos comprador por default
+        'fecha': now,
+        'showed': true,
+      };
+
+      await chatRef
+          .collection('lastMessageBuyer')
+          .doc('last')
+          .set(initialMessage);
+      await chatRef
+          .collection('lastMessageSelller')
+          .doc('last')
+          .set(initialMessage);
+
+      //  Actualizar lastUpdate de ambos usuarios
+      await compradorRef.update({'lastUpdate': now});
+      await vendedorRef.update({'lastUpdate': now});
+
+      print(
+        ' Chat creado exitosamente, subcolecciones creadas, y lastUpdate actualizado',
+      );
     } catch (error) {
       print('Error al crear el chat: $error');
     }

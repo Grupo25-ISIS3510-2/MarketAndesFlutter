@@ -1,8 +1,8 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart'; 
-import 'package:device_info_plus/device_info_plus.dart'; 
+import 'package:flutter/foundation.dart';
+import 'package:device_info_plus/device_info_plus.dart';
 import 'session_state_controller.dart';
 
 ValueNotifier<AuthService> authService = ValueNotifier(AuthService());
@@ -62,7 +62,6 @@ class AuthService {
     final uid = credential.user?.uid ?? "";
     currentUserUuid.value = uid;
 
-  
     await _registerEvent('login', uid);
 
     return credential;
@@ -100,9 +99,9 @@ class AuthService {
         'createdAt': FieldValue.serverTimestamp(),
         'longitud': -74.065978,
         'latitud': 4.601295,
+        'lastUpdate': FieldValue.serverTimestamp(),
       });
 
-      
       await _registerEvent('signup', user.uid);
 
       return userCredential;
@@ -124,7 +123,6 @@ class AuthService {
     final uid = currentUser?.uid;
 
     await firebaseAuth.signOut();
-
 
     if (uid != null) {
       await _registerEvent('logout', uid);

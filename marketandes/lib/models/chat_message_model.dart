@@ -11,11 +11,11 @@ class ChatMessage {
     return ChatMessage(
       message: data['message'] ?? '',
       uuid: data['uuid'] ?? '',
-      fecha: (data['fecha'] as Timestamp).toDate(),
+      fecha: DateTime.parse(data['fecha']),
     );
   }
 
   Map<String, dynamic> toMap() {
-    return {'message': message, 'uuid': uuid, 'fecha': fecha};
+    return {'message': message, 'uuid': uuid, 'fecha': fecha.toIso8601String()};
   }
 }

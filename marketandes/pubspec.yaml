@@ -46,6 +46,7 @@ dependencies:
   geolocator: 10.0.1
   permission_handler: ^11.4.0
   device_info_plus: 9.0.2
+  shared_preferences: ^2.0.15
 
 dev_dependencies:
   flutter_test:
