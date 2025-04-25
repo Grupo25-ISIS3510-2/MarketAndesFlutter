@@ -149,30 +149,56 @@ class _ChatConversationPageState extends State<ChatConversationPage> {
                       ),
                     ),
                   Flexible(
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        vertical: 12,
-                        horizontal: 16,
-                      ),
-                      decoration: BoxDecoration(
-                        color:
-                            isMine
+                    child: Stack(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            vertical: 12,
+                            horizontal: 16,
+                          ),
+                          decoration: BoxDecoration(
+                            color: isMine
                                 ? const Color(0xFFFDC500)
                                 : const Color(0xFF00296B),
-                        borderRadius: BorderRadius.only(
-                          topLeft: Radius.circular(isMine ? 16 : 0),
-                          topRight: Radius.circular(isMine ? 0 : 16),
-                          bottomLeft: const Radius.circular(16),
-                          bottomRight: const Radius.circular(16),
+                            borderRadius: BorderRadius.only(
+                              topLeft: Radius.circular(isMine ? 16 : 0),
+                              topRight: Radius.circular(isMine ? 0 : 16),
+                              bottomLeft: const Radius.circular(16),
+                              bottomRight: const Radius.circular(16),
+                            ),
+                          ),
+                          child: Text(
+                            message.message,
+                            style: TextStyle(
+                              color: isMine ? Colors.black : Colors.white,
+                              fontSize: 14,
+                            ),
+                          ),
                         ),
-                      ),
-                      child: Text(
-                        message.message,
-                        style: TextStyle(
-                          color: isMine ? Colors.black : Colors.white,
-                          fontSize: 14,
-                        ),
-                      ),
+                        if (isMine && message.isQueued)
+                            Positioned(
+                              bottom: -10,
+                              right: 8,
+                              child: Row(
+                                children: const [
+                                  Icon(
+                                    Icons.schedule,
+                                    size: 14,
+                                    color: Colors.black54,
+                                  ),
+                                  SizedBox(width: 4),
+                                  Text(
+                                    'Enviando...',
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      color: Colors.black54,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+
+                      ],
                     ),
                   ),
                   if (isMine) const SizedBox(width: 40),

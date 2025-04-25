@@ -60,46 +60,113 @@ class ChatController {
     _stopListeningProximity();
   }
 
-  // ✉️ Enviar mensaje
-  Future<void> sendMessage(String message) async {
-    if (message.trim().isEmpty) return;
+  // ✉️ Enviar mensaje (con soporte offline)
+Future<void> sendMessage(String message) async {
+  if (message.trim().isEmpty) return;
 
-    final newMessage = {
-      'message': message.trim(),
-      'uuid': userId,
-      'fecha': Timestamp.now(),
-      'showed': false,
-    };
+  final newMessage = {
+    'message': message.trim(),
+    'uuid': userId,
+    'fecha': Timestamp.now(),
+    'showed': false,
+  };
 
-    final isBuyer = await _isBuyer();
-    final subcollection = isBuyer ? 'lastMessageBuyer' : 'lastMessageSelller';
+  final isBuyer = await _isBuyer();
+  final subcollection = isBuyer ? 'lastMessageBuyer' : 'lastMessageSelller';
 
-    await _firestore.collection('chatsFlutter').doc(chatId).update({
-      'timeBegin': Timestamp.now(),
-      'showed': false,
-    });
+  // Actualización en la colección principal (información común para todos)
+  await _firestore.collection('chatsFlutter').doc(chatId).update({
+    'timeBegin': Timestamp.now(),
+    'showed': false,
+  });
 
-    final lastDocRef = _firestore
-        .collection('chatsFlutter')
-        .doc(chatId)
-        .collection(subcollection)
-        .doc('last');
+  final lastDocRef = _firestore
+      .collection('chatsFlutter')
+      .doc(chatId)
+      .collection(subcollection)
+      .doc('last');
 
-    // Intentar update, y fallback a set si falla
-    try {
-      await lastDocRef.update(newMessage);
-    } catch (_) {
-      await lastDocRef.set(newMessage);
-    }
-
-    final msg = ChatMessage(
-      message: message.trim(),
-      uuid: userId,
-      fecha: DateTime.now(),
-    );
-
-    await _addMessageToLocal(msg);
+  // Intentar update, y fallback a set si falla
+  try {
+    await lastDocRef.update(newMessage);
+  } catch (_) {
+    await lastDocRef.set(newMessage);
   }
+
+  // Crear el objeto de mensaje localmente
+  final msg = ChatMessage(
+    message: message.trim(),
+    uuid: userId,
+    fecha: DateTime.now(),
+    isQueued: true, // Marcamos como en espera (colocado en cola)
+  );
+
+  // Guardar el mensaje localmente
+  await _addMessageToLocal(msg);
+
+  // Intentar enviar el mensaje, con fallback en caso de error
+  try {
+    await _sendQueuedMessages();
+  } catch (e) {
+    print('⚠️ Error al enviar mensaje. Guardado localmente.');
+    // Aquí no es necesario hacer nada más porque el mensaje ya está marcado como "en espera"
+  }
+}
+
+
+Future<void> _sendQueuedMessages() async {
+  final prefs = await SharedPreferences.getInstance();
+  final currentRaw = prefs.getString(_localKey);
+  if (currentRaw == null) return;
+
+  final localMsgs = List<Map<String, dynamic>>.from(jsonDecode(currentRaw));
+  if (localMsgs.isEmpty) return;
+
+  final isBuyer = await _isBuyer();
+  final subcollection = isBuyer ? 'lastMessageBuyer' : 'lastMessageSelller';
+  final lastDocRef = _firestore
+      .collection('chatsFlutter')
+      .doc(chatId)
+      .collection(subcollection)
+      .doc('last');
+
+  bool allSent = true;
+
+  for (var map in localMsgs) {
+    try {
+      final msg = ChatMessage.fromMap(map);
+
+      final msgData = {
+        'message': msg.message,
+        'uuid': msg.uuid,
+        'fecha': Timestamp.fromDate(msg.fecha),
+        'showed': false,
+      };
+
+      await _firestore.collection('chatsFlutter').doc(chatId).update({
+        'timeBegin': Timestamp.now(),
+        'showed': false,
+      });
+
+      try {
+        await lastDocRef.update(msgData);
+      } catch (_) {
+        await lastDocRef.set(msgData);
+      }
+
+      print('📤 Mensaje enviado: ${msg.message}');
+    } catch (e) {
+      allSent = false;
+      print('❌ Error al enviar mensaje local: $e');
+    }
+  }
+
+  // Solo limpiamos la cola si todos fueron enviados
+  if (allSent) {
+    await prefs.remove(_localKey);
+  }
+}
+
 
   // 💾 Guardar mensaje local
   Future<void> _addMessageToLocal(ChatMessage message) async {
@@ -121,23 +188,21 @@ class ChatController {
     List<ChatMessage> localMessages = [];
 
     if (currentRaw != null) {
-      localMessages =
-          List<Map<String, dynamic>>.from(
-            jsonDecode(currentRaw),
-          ).map((m) => ChatMessage.fromMap(m)).toList();
+      localMessages = List<Map<String, dynamic>>.from(jsonDecode(currentRaw))
+          .map((m) => ChatMessage.fromMap(m))
+          .toList();
     }
 
     try {
       final isBuyer = await _isBuyer();
       final sub = isBuyer ? 'lastMessageSelller' : 'lastMessageBuyer';
 
-      final snapshot =
-          await _firestore
-              .collection('chatsFlutter')
-              .doc(chatId)
-              .collection(sub)
-              .doc('last')
-              .get();
+      final snapshot = await _firestore
+          .collection('chatsFlutter')
+          .doc(chatId)
+          .collection(sub)
+          .doc('last')
+          .get();
 
       if (snapshot.exists) {
         final data = snapshot.data()!;
@@ -148,6 +213,7 @@ class ChatController {
             message: data['message'],
             uuid: data['uuid'],
             fecha: (data['fecha'] as Timestamp).toDate(),
+            isQueued: false,
           );
 
           localMessages.add(newMessage);
