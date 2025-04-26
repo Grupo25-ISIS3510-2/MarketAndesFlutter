@@ -31,6 +31,7 @@ class _ChatConversationPageState extends State<ChatConversationPage> {
     super.initState();
     _controller = ChatController(widget.chatId);
     _controller.initBrightness();
+    _controller.loadInitialMessages();
   }
 
   @override
@@ -50,10 +51,8 @@ class _ChatConversationPageState extends State<ChatConversationPage> {
   Future<void> _sendMessage() async {
     final text = _messageController.text.trim();
     if (text.isEmpty) return;
-
     await _controller.sendMessage(text);
     _messageController.clear();
-    setState(() {});
   }
 
   @override
@@ -65,7 +64,7 @@ class _ChatConversationPageState extends State<ChatConversationPage> {
         children: [
           Container(height: 4, color: const Color(0xFFFDC500)),
           Expanded(child: _buildMessages()),
-          _buildMessageInput(context),
+          _buildMessageInput(),
         ],
       ),
     );
@@ -138,47 +137,44 @@ class _ChatConversationPageState extends State<ChatConversationPage> {
 
             return Container(
               margin: const EdgeInsets.only(bottom: 12),
-              child: Row(
-                mainAxisAlignment:
-                    isMine ? MainAxisAlignment.end : MainAxisAlignment.start,
-                crossAxisAlignment: CrossAxisAlignment.end,
+              child: Column(
+                crossAxisAlignment:
+                    isMine ? CrossAxisAlignment.end : CrossAxisAlignment.start,
                 children: [
-                  if (!isMine)
-                    Padding(
-                      padding: const EdgeInsets.only(right: 8.0),
-                      child: CircleAvatar(
-                        radius: 15,
-                        backgroundImage: NetworkImage(widget.userPhotoUrl),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 12,
+                      horizontal: 16,
+                    ),
+                    decoration: BoxDecoration(
+                      color:
+                          isMine
+                              ? const Color(0xFFFDC500)
+                              : const Color(0xFF00296B),
+                      borderRadius: BorderRadius.only(
+                        topLeft: Radius.circular(isMine ? 16 : 0),
+                        topRight: Radius.circular(isMine ? 0 : 16),
+                        bottomLeft: const Radius.circular(16),
+                        bottomRight: const Radius.circular(16),
                       ),
                     ),
-                  Flexible(
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        vertical: 12,
-                        horizontal: 16,
-                      ),
-                      decoration: BoxDecoration(
-                        color:
-                            isMine
-                                ? const Color(0xFFFDC500)
-                                : const Color(0xFF00296B),
-                        borderRadius: BorderRadius.only(
-                          topLeft: Radius.circular(isMine ? 16 : 0),
-                          topRight: Radius.circular(isMine ? 0 : 16),
-                          bottomLeft: const Radius.circular(16),
-                          bottomRight: const Radius.circular(16),
-                        ),
-                      ),
-                      child: Text(
-                        message.message,
-                        style: TextStyle(
-                          color: isMine ? Colors.black : Colors.white,
-                          fontSize: 14,
-                        ),
+                    child: Text(
+                      message.message,
+                      style: TextStyle(
+                        color: isMine ? Colors.black : Colors.white,
+                        fontSize: 14,
                       ),
                     ),
                   ),
-                  if (isMine) const SizedBox(width: 40),
+                  if (message.pending)
+                    const Padding(
+                      padding: EdgeInsets.only(top: 4),
+                      child: Icon(
+                        Icons.access_time,
+                        size: 14,
+                        color: Colors.grey,
+                      ),
+                    ),
                 ],
               ),
             );
@@ -188,7 +184,7 @@ class _ChatConversationPageState extends State<ChatConversationPage> {
     );
   }
 
-  Widget _buildMessageInput(BuildContext context) {
+  Widget _buildMessageInput() {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: const BoxDecoration(
