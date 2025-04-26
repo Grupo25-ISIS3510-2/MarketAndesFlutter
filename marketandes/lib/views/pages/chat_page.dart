@@ -3,7 +3,9 @@ import '../../controllers/chat_controller.dart';
 import '../../controllers/session_state_controller.dart';
 import '../../models/chat_model.dart';
 import 'chat_detail_page.dart';
-import 'map_users.dart';
+import 'map_users.dart'; // para ver el punto sugerido
+import 'map_selection_page.dart'; // para seleccionar nuevo punto real
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class ChatPage extends StatelessWidget {
   const ChatPage({super.key});
@@ -41,23 +43,13 @@ class ChatPage extends StatelessWidget {
                 child: FutureBuilder<List<ChatModel>>(
                   future: controller.getChats(userId),
                   builder: (context, snapshot) {
-                    print(
-                      '📡 [UI] Estado snapshot: ${snapshot.connectionState}',
-                    );
-                    print('📡 [UI] Tiene data: ${snapshot.hasData}');
-                    print(
-                      '📡 [UI] Chats recibidos: ${snapshot.data?.length ?? 0}',
-                    );
-
                     if (snapshot.connectionState == ConnectionState.waiting) {
                       return const Center(child: CircularProgressIndicator());
                     }
 
                     if (snapshot.connectionState == ConnectionState.done) {
                       if (snapshot.hasError) {
-                        return Center(
-                          child: Text('❌ Error: ${snapshot.error}'),
-                        );
+                        return Center(child: Text(' Error: ${snapshot.error}'));
                       }
 
                       final chats = snapshot.data ?? [];
@@ -134,7 +126,7 @@ class ChatPage extends StatelessWidget {
                                             (context) => AlertDialog(
                                               title: const Text('Cerrar chat'),
                                               content: const Text(
-                                                '¿Estás seguro de que deseas cerrar este chat?',
+                                                '¿Deseas seleccionar el punto de encuentro real antes de cerrar?',
                                               ),
                                               actions: [
                                                 TextButton(
@@ -151,23 +143,59 @@ class ChatPage extends StatelessWidget {
                                                         context,
                                                         true,
                                                       ),
-                                                  child: const Text('Cerrar'),
+                                                  child: const Text(
+                                                    'Seleccionar',
+                                                  ),
                                                 ),
                                               ],
                                             ),
                                       );
 
                                       if (confirmar ?? false) {
-                                        await controller.cerrarChat(chat.id);
-                                        ScaffoldMessenger.of(
+                                        final puntoReal = await Navigator.push(
                                           context,
-                                        ).showSnackBar(
-                                          const SnackBar(
-                                            content: Text(
-                                              'Chat cerrado exitosamente.',
-                                            ),
+                                          MaterialPageRoute(
+                                            builder:
+                                                (_) => MapaSeleccionPage(
+                                                  latitudSugerida:
+                                                      chat.latitudPuntoEncuentro,
+                                                  longitudSugerida:
+                                                      chat.longitudPuntoEncuentro,
+                                                ),
                                           ),
                                         );
+
+                                        if (puntoReal != null) {
+                                          await FirebaseFirestore.instance
+                                              .collection('puntosDeEncuentro')
+                                              .add({
+                                                'chatId': chat.id,
+                                                'puntoSugerido': {
+                                                  'latitud':
+                                                      chat.latitudPuntoEncuentro,
+                                                  'longitud':
+                                                      chat.longitudPuntoEncuentro,
+                                                },
+                                                'puntoReal': {
+                                                  'latitud': puntoReal.latitude,
+                                                  'longitud':
+                                                      puntoReal.longitude,
+                                                },
+                                                'timestamp': Timestamp.now(),
+                                              });
+
+                                          await controller.cerrarChat(chat.id);
+
+                                          ScaffoldMessenger.of(
+                                            context,
+                                          ).showSnackBar(
+                                            const SnackBar(
+                                              content: Text(
+                                                'Chat cerrado exitosamente.',
+                                              ),
+                                            ),
+                                          );
+                                        }
                                       }
                                     },
                                   ),
@@ -178,7 +206,6 @@ class ChatPage extends StatelessWidget {
                       );
                     }
 
-                    // fallback para cualquier otro estado
                     return const Center(child: Text('Cargando...'));
                   },
                 ),

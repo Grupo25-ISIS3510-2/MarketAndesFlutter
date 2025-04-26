@@ -51,4 +51,13 @@ class ChatModel {
   String get nombreUsuario => userData['fullName'] ?? 'Sin nombre';
   String get id => chatData['id'];
   String get userPhotoUrl => 'https://randomuser.me/api/portraits/men/1.jpg';
+  double get latitudPuntoEncuentro {
+    final valor = chatData['latitudPuntoEncuentro'];
+    return valor is num ? valor.toDouble() : 0.0;
+  }
+
+  double get longitudPuntoEncuentro {
+    final valor = chatData['longitudPuntoEncuentro'];
+    return valor is num ? valor.toDouble() : 0.0;
+  }
 }
