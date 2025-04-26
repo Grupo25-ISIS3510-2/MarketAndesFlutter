@@ -7,7 +7,22 @@ class ChatController {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   Future<void> cerrarChat(String chatId) async {
+    final doc = await _firestore.collection('chatsFlutter').doc(chatId).get();
+
+    if (!doc.exists) return;
+
+    final data = doc.data()!;
+    final compradorRef = data['uuidUser'] as DocumentReference;
+    final vendedorRef = data['uuidOwner'] as DocumentReference;
+    final now = Timestamp.now();
+
     await anadirTiempoRegistro(chatId);
+
+    // Actualizar lastUpdate de ambos usuarios
+    await compradorRef.update({'lastUpdate': now});
+    await vendedorRef.update({'lastUpdate': now});
+
+    // Eliminar el chat
     await _firestore.collection('chatsFlutter').doc(chatId).delete();
   }
 
@@ -38,8 +53,8 @@ class ChatController {
     final remoteUpdateStr =
         (remoteUpdate as Timestamp).toDate().toIso8601String();
 
-    print(' [getChats] LocalUpdate: $localUpdate');
-    print(' [getChats] RemoteUpdate: $remoteUpdateStr');
+    print('[getChats] LocalUpdate: $localUpdate');
+    print('[getChats] RemoteUpdate: $remoteUpdateStr');
 
     if (localUpdate == remoteUpdateStr && localData.isNotEmpty) {
       print('[getChats] Usando local con ${localData.length} chats');
