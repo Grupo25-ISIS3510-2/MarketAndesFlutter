@@ -30,27 +30,32 @@ class _FavoritesPageState extends State<FavoritesPage> {
     });
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFD8D8D8),
-      appBar: AppBar(
-        title: const Text('Mis Favoritos'),
-        backgroundColor: const Color(0xFF00296B),
-      ),
-      body: _favorites.isEmpty
-          ? const Center(
-              child: Text(
-                "No tienes productos en favoritos.",
-                style: TextStyle(fontSize: 18, fontFamily: 'Poppins'),
+ @override
+Widget build(BuildContext context) {
+  return Scaffold(
+    backgroundColor: const Color(0xFFD8D8D8),
+    appBar: AppBar(
+      title: const Text('Mis Favoritos'),
+      backgroundColor: const Color(0xFF00296B),
+    ),
+    body: _favorites.isEmpty
+        ? const Center(
+            child: Text(
+              "No tienes productos en favoritos.",
+              style: TextStyle(
+                fontSize: 18,
+                fontFamily: 'Poppins',
+                color: Colors.black, 
               ),
-            )
-          : Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: _buildProductGrid(_favorites),
             ),
-    );
-  }
+          )
+        : Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: _buildProductGrid(_favorites),
+          ),
+  );
+}
+
 
   Widget _buildProductGrid(List<Product> products) {
     return GridView.builder(
