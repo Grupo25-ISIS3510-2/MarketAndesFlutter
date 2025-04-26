@@ -16,6 +16,9 @@ class ChatController {
   double _previousBrightness = 1.0;
   bool _proximityMode = false;
 
+  final _messagesController = StreamController<List<ChatMessage>>.broadcast();
+  List<ChatMessage> _messages = [];
+
   ChatController(this.chatId);
 
   bool get isProximityMode => _proximityMode;
@@ -57,129 +60,70 @@ class ChatController {
 
   void dispose() {
     _stopListeningProximity();
+    _messagesController.close();
   }
 
-  Future<void> sendMessage(String message) async {
-    if (message.trim().isEmpty) return;
+  Future<void> loadInitialMessages() async {
+    final prefs = await SharedPreferences.getInstance();
+    final currentRaw = prefs.getString(_localKey);
 
-    final newMessage = {
-      'message': message.trim(),
-      'uuid': userId,
-      'fecha': Timestamp.now(),
-      'showed': false,
-    };
-
-    final isBuyer = await _isBuyer();
-    final subcollection = isBuyer ? 'lastMessageBuyer' : 'lastMessageSelller';
-
-    await _firestore.collection('chatsFlutter').doc(chatId).update({
-      'timeBegin': Timestamp.now(),
-      'showed': false,
-    });
-
-    final lastDocRef = _firestore
-        .collection('chatsFlutter')
-        .doc(chatId)
-        .collection(subcollection)
-        .doc('last');
-
-    // Intentar update, y fallback a set si falla
-    try {
-      await lastDocRef.update(newMessage);
-    } catch (_) {
-      await lastDocRef.set(newMessage);
+    if (currentRaw != null) {
+      _messages =
+          List<Map<String, dynamic>>.from(
+            jsonDecode(currentRaw),
+          ).map((m) => ChatMessage.fromMap(m)).toList();
+      _messagesController.add(List.from(_messages));
     }
+  }
 
-    final msg = ChatMessage(
-      message: message.trim(),
+  Future<void> sendMessage(String text) async {
+    final newMessage = ChatMessage(
+      message: text,
       uuid: userId,
       fecha: DateTime.now(),
+      pending: true,
     );
 
-    await _addMessageToLocal(msg);
-  }
-
-  Stream<List<ChatMessage>> getMessagesStream() async* {
-    final prefs = await SharedPreferences.getInstance();
-    final currentRaw = prefs.getString(_localKey);
-    List<ChatMessage> localMessages = [];
-
-    if (currentRaw != null) {
-      localMessages =
-          List<Map<String, dynamic>>.from(
-            jsonDecode(currentRaw),
-          ).map((m) => ChatMessage.fromMap(m)).toList();
-    }
-
-    // Emitir primero los mensajes locales
-    yield localMessages;
-
-    final isBuyer = await _isBuyer();
-    final sub = isBuyer ? 'lastMessageSelller' : 'lastMessageBuyer';
-
-    yield* _firestore
-        .collection('chatsFlutter')
-        .doc(chatId)
-        .collection(sub)
-        .doc('last')
-        .snapshots()
-        .asyncMap((snapshot) async {
-          if (!snapshot.exists) return localMessages;
-
-          final data = snapshot.data()!;
-          final alreadySeen = data['showed'] == true;
-
-          if (!alreadySeen) {
-            final newMessage = ChatMessage(
-              message: data['message'],
-              uuid: data['uuid'],
-              fecha: (data['fecha'] as Timestamp).toDate(),
-            );
-
-            // Guardar en local el nuevo mensaje
-            localMessages.add(newMessage);
-            await prefs.setString(
-              _localKey,
-              jsonEncode(localMessages.map((m) => m.toMap()).toList()),
-            );
-
-            // Marcar como mostrado en Firebase
-            await snapshot.reference.update({'showed': true});
-          }
-
-          return localMessages;
-        });
-  }
-
-  Future<void> _addMessageToLocal(ChatMessage message) async {
-    final prefs = await SharedPreferences.getInstance();
-    final currentRaw = prefs.getString(_localKey);
-    final List<Map<String, dynamic>> localMsgs =
-        currentRaw != null
-            ? List<Map<String, dynamic>>.from(jsonDecode(currentRaw))
-            : [];
-
-    localMsgs.add(message.toMap());
-    await prefs.setString(_localKey, jsonEncode(localMsgs));
-  }
-
-  Future<List<ChatMessage>> loadMessages() async {
-    final prefs = await SharedPreferences.getInstance();
-    final currentRaw = prefs.getString(_localKey);
-    List<ChatMessage> localMessages = [];
-
-    if (currentRaw != null) {
-      localMessages =
-          List<Map<String, dynamic>>.from(
-            jsonDecode(currentRaw),
-          ).map((m) => ChatMessage.fromMap(m)).toList();
-    }
+    _messages.add(newMessage);
+    _messagesController.add(List.from(_messages));
+    await _saveMessagesLocally();
 
     try {
       final isBuyer = await _isBuyer();
+      final subcollection = isBuyer ? 'lastMessageBuyer' : 'lastMessageSelller';
+
+      final lastDocRef = _firestore
+          .collection('chatsFlutter')
+          .doc(chatId)
+          .collection(subcollection)
+          .doc('last');
+
+      await lastDocRef.set({
+        'message': text,
+        'uuid': userId,
+        'fecha': Timestamp.now(),
+        'showed': false,
+      });
+
+      // Éxito: eliminar el pending
+      newMessage.pending = false;
+      await _saveMessagesLocally();
+      _messagesController.add(List.from(_messages));
+    } catch (e) {
+      print('⛔ Error enviando mensaje: $e');
+    }
+  }
+
+  Stream<List<ChatMessage>> getMessagesStream() {
+    _firestore.collection('chatsFlutter').doc(chatId).snapshots().listen((
+      docSnapshot,
+    ) async {
+      if (!docSnapshot.exists) return;
+
+      final isBuyer = await _isBuyer();
       final sub = isBuyer ? 'lastMessageSelller' : 'lastMessageBuyer';
 
-      final snapshot =
+      final lastSnapshot =
           await _firestore
               .collection('chatsFlutter')
               .doc(chatId)
@@ -187,8 +131,8 @@ class ChatController {
               .doc('last')
               .get();
 
-      if (snapshot.exists) {
-        final data = snapshot.data()!;
+      if (lastSnapshot.exists) {
+        final data = lastSnapshot.data()!;
         final alreadySeen = data['showed'] == true;
 
         if (!alreadySeen) {
@@ -196,23 +140,27 @@ class ChatController {
             message: data['message'],
             uuid: data['uuid'],
             fecha: (data['fecha'] as Timestamp).toDate(),
+            pending: false,
           );
 
-          localMessages.add(newMessage);
+          _messages.add(newMessage);
+          await _saveMessagesLocally();
+          _messagesController.add(List.from(_messages));
 
-          await prefs.setString(
-            _localKey,
-            jsonEncode(localMessages.map((m) => m.toMap()).toList()),
-          );
-
-          await snapshot.reference.update({'showed': true});
+          await lastSnapshot.reference.update({'showed': true});
         }
       }
-    } catch (_) {
-      print('Error de conexión. Usando solo datos locales.');
-    }
+    });
 
-    return localMessages;
+    return _messagesController.stream;
+  }
+
+  Future<void> _saveMessagesLocally() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(
+      _localKey,
+      jsonEncode(_messages.map((m) => m.toMap()).toList()),
+    );
   }
 
   Future<bool> _isBuyer() async {
