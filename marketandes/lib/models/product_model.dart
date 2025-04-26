@@ -9,6 +9,7 @@ class Product {
   final String uidSeller;
   final int sellerRating;
   final String category;
+  bool isFavorite; // Agregamos el campo para saber si el producto es favorito.
 
   Product({
     required this.name,
@@ -19,6 +20,7 @@ class Product {
     required this.sellerRating,
     required this.uidSeller,
     required this.category,
+    this.isFavorite = false, // Inicializamos como no favorito por defecto.
   });
 
   factory Product.fromFirestore(DocumentSnapshot doc) {
@@ -32,6 +34,7 @@ class Product {
       uidSeller: data['uidSeller'] ?? 'Vendedor desconocido',
       sellerRating: data['sellerRating'] ?? 0,
       category: data['category'] ?? 'General',
+      isFavorite: false, // Cuando se crea un producto desde Firestore, no tenemos el estado de favorito, lo dejamos en false por defecto.
     );
   }
 }

@@ -8,6 +8,8 @@ import 'package:marketandes/views/pages/map_page.dart';
 import 'package:marketandes/views/pages/login_page.dart';
 import 'package:marketandes/views/widgets/navbar_widget.dart';
 import 'package:marketandes/controllers/session_state_controller.dart';
+import 'package:marketandes/views/pages/favorites_page.dart';
+
 
 class HomeWithNavbar extends StatefulWidget {
   final int selectedIndex;
@@ -281,44 +283,54 @@ class _HomeWithNavbarState extends State<HomeWithNavbar> {
         ),
         centerTitle: true,
       ),
-      drawer: Drawer(
-        child: ListView(
-          padding: EdgeInsets.zero,
-          children: [
-            DrawerHeader(
-              decoration: const BoxDecoration(color: Color(0xFF00296B)),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: const [
-                  Text(
-                    "MarketAndes",
-                    style: TextStyle(color: Colors.white, fontSize: 24),
-                  ),
-                  SizedBox(height: 10),
-                  Text(
-                    "Opciones",
-                    style: TextStyle(color: Colors.white70, fontSize: 16),
-                  ),
-                ],
-              ),
+drawer: Drawer(
+  child: ListView(
+    padding: EdgeInsets.zero,
+    children: [
+      DrawerHeader(
+        decoration: const BoxDecoration(color: Color(0xFF00296B)),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: const [
+            Text(
+              "MarketAndes",
+              style: TextStyle(color: Colors.white, fontSize: 24),
             ),
-            ListTile(
-              leading: const Icon(Icons.map, color: Colors.black),
-              title: const Text("Mapa"),
-              onTap:
-                  () => Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => const MapPage()),
-                  ),
-            ),
-            ListTile(
-              leading: const Icon(Icons.exit_to_app, color: Colors.red),
-              title: const Text("Cerrar sesión"),
-              onTap: () => _logout(context),
+            SizedBox(height: 10),
+            Text(
+              "Opciones",
+              style: TextStyle(color: Colors.white70, fontSize: 16),
             ),
           ],
         ),
       ),
+      ListTile(
+        leading: const Icon(Icons.favorite, color: Colors.black),
+        title: const Text("Ver favoritos"),
+        onTap: () {
+          Navigator.pop(context); // Cierra el drawer
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const FavoritesPage()),
+          );
+        },
+      ),
+      ListTile(
+        leading: const Icon(Icons.map, color: Colors.black),
+        title: const Text("Mapa"),
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const MapPage()),
+        ),
+      ),
+      ListTile(
+        leading: const Icon(Icons.exit_to_app, color: Colors.red),
+        title: const Text("Cerrar sesión"),
+        onTap: () => _logout(context),
+      ),
+    ],
+  ),
+),
       body: Stack(
         children: [
           IndexedStack(index: _selectedIndex, children: _pages),

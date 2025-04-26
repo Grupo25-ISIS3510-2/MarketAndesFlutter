@@ -45,42 +45,53 @@ class _HomePageState extends State<HomePage> {
               ),
               const SizedBox(height: 10),
               FutureBuilder<List<Product>>(
-                future: _controller.fetchRecommendedProducts(),
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const CircularProgressIndicator();
-                  } else if (snapshot.hasError) {
-                    return Text('Error: ${snapshot.error}');
-                  } else {
-                    return _buildProductGrid(snapshot.data ?? []);
-                  }
-                },
-              ),
-              const SizedBox(height: 20),
-              const Center(
-                child: Text(
-                  "Explorar Todos los Productos",
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    fontFamily: 'Poppins',
-                    color: Colors.black,
+                    future: _controller.fetchRecommendedProducts(),
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const CircularProgressIndicator();
+                      } else if (snapshot.hasError) {
+                        return Text('Error: ${snapshot.error}');
+                      } else {
+                        final recommendedProducts = snapshot.data ?? [];
+                        return Column(
+                          children: [
+                            _buildProductGrid(recommendedProducts),
+                            const SizedBox(height: 20),
+                            const Center(
+                              child: Text(
+                                "Explorar Todos los Productos",
+                                style: TextStyle(
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.bold,
+                                  fontFamily: 'Poppins',
+                                  color: Colors.black,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            FutureBuilder<List<Product>>(
+                              future: _controller.fetchAllProducts(),
+                              builder: (context, allSnapshot) {
+                                if (allSnapshot.connectionState == ConnectionState.waiting) {
+                                  return const CircularProgressIndicator();
+                                } else if (allSnapshot.hasError) {
+                                  return Text('Error: ${allSnapshot.error}');
+                                } else {
+                                  final allProducts = allSnapshot.data ?? [];
+                                  final filteredProducts = allProducts.where((product) =>
+                                    !recommendedProducts.any((recommended) => recommended.name == product.name)
+                                  ).toList();
+
+                                  return _buildProductGrid(filteredProducts);
+                                }
+                              },
+                            ),
+                          ],
+                        );
+                      }
+                    },
                   ),
-                ),
-              ),
-              const SizedBox(height: 10),
-              FutureBuilder<List<Product>>(
-                future: _controller.fetchAllProducts(),
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const CircularProgressIndicator();
-                  } else if (snapshot.hasError) {
-                    return Text('Error: ${snapshot.error}');
-                  } else {
-                    return _buildProductGrid(snapshot.data ?? []);
-                  }
-                },
-              ),
+
             ],
           ),
         ),
@@ -106,13 +117,16 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildProductCard(Product product) {
+    // Usamos el campo `name` como identificador para verificar si el producto está en favoritos
+    bool isFavorite = _controller.userFavorites.contains(product.name);
+
     return GestureDetector(
       onTap: () {
         Navigator.push(
           context,
           MaterialPageRoute(
-          builder: (_) => ProductDetailPage(product: product),
-        ),
+            builder: (_) => ProductDetailPage(product: product),
+          ),
         );
       },
       child: Container(
@@ -127,8 +141,8 @@ class _HomePageState extends State<HomePage> {
             ),
           ],
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.center,
+        child: Stack(
+          alignment: Alignment.topRight, // Alineamos el corazón en la esquina superior derecha
           children: [
             Expanded(
               child: Padding(
@@ -154,30 +168,56 @@ class _HomePageState extends State<HomePage> {
                   color: Colors.black,
                   fontFamily: 'Poppins',
                 ),
-              ),
-            ),
-            const SizedBox(height: 8),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(vertical: 10),
-              decoration: const BoxDecoration(
-                color: Color(0xFF00296B),
-                borderRadius: BorderRadius.only(
-                  bottomLeft: Radius.circular(12),
-                  bottomRight: Radius.circular(12),
-                ),
-              ),
-              child: Center(
-                child: Text(
-                  "\$ ${product.price}",
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                    fontFamily: 'Poppins',
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                  child: Text(
+                    product.name,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                      color: Colors.black,
+                      fontFamily: 'Poppins',
+                    ),
                   ),
                 ),
+                const SizedBox(height: 8),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  decoration: const BoxDecoration(
+                    color: Color(0xFF00296B),
+                    borderRadius: BorderRadius.only(
+                      bottomLeft: Radius.circular(12),
+                      bottomRight: Radius.circular(12),
+                    ),
+                  ),
+                  child: Center(
+                    child: Text(
+                      "\$ ${product.price}",
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                        fontFamily: 'Poppins',
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            IconButton(
+              icon: Icon(
+                isFavorite ? Icons.favorite : Icons.favorite_border,
+                color: isFavorite ? Colors.red : Colors.grey,
+                size: 30,
               ),
+              onPressed: () {
+                setState(() {
+                  // Usamos el nombre del producto como identificador
+                  _controller.toggleFavorite(product.name);
+                });
+              },
             ),
           ],
         ),
