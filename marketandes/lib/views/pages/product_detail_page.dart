@@ -5,7 +5,7 @@ import 'package:marketandes/views/pages/rating_form_page.dart';
 import 'package:marketandes/controllers/product_detail_controller.dart';
 import 'package:marketandes/views/pages/chat_page.dart';
 import 'package:marketandes/views/widget_tree.dart';
-import 'package:flutter_cache_manager/flutter_cache_manager.dart'; // ← importamos cache manager
+import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'dart:io';
 
 class ProductDetailPage extends StatelessWidget {
