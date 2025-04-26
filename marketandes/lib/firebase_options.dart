@@ -63,7 +63,7 @@ class DefaultFirebaseOptions {
     messagingSenderId: '670061302732',
     projectId: 'marketandes2025',
     storageBucket: 'marketandes2025.firebasestorage.app',
-    iosBundleId: 'com.example.marketandes',
+    iosBundleId: 'com.uniandes.marketandes',
   );
 
 }
