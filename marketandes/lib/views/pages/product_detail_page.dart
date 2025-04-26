@@ -87,6 +87,7 @@ class ProductDetailPage extends StatelessWidget {
                     ),
                     onPressed: () async {
                       await controller.logInteractionIfShortSession();
+                      await controller.logPurchaseForTendencies(product.category);
                       Navigator.push(
                         context,
                         MaterialPageRoute(builder: (context) => RatingFormPage()),
@@ -104,6 +105,7 @@ class ProductDetailPage extends StatelessWidget {
                     ),
                     onPressed: () async {
                       await controller.logInteractionIfShortSession();
+                      await controller.logPurchaseForTendencies(product.category);
                       await controller.createChat(
                         name: product.name,
                         sellerID: product.sellerID,
