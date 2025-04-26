@@ -116,112 +116,104 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildProductCard(Product product) {
-    // Usamos el campo `name` como identificador para verificar si el producto está en favoritos
-    bool isFavorite = _controller.userFavorites.contains(product.name);
+Widget _buildProductCard(Product product) {
+  bool isFavorite = _controller.userFavorites.contains(product.name);
 
-    return GestureDetector(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => ProductDetailPage(product: product),
-          ),
-        );
-      },
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: const [
-            BoxShadow(
-              color: Colors.black12,
-              blurRadius: 4,
-              offset: Offset(2, 2),
-            ),
-          ],
+  return GestureDetector(
+    onTap: () {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => ProductDetailPage(product: product),
         ),
-        child: Stack(
-          alignment: Alignment.topRight, // Alineamos el corazón en la esquina superior derecha
-          children: [
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: product.imagePath != null && product.imagePath!.isNotEmpty
-                    ? CachedNetworkImage(
-                        imageUrl: product.imagePath!,
-                        fit: BoxFit.contain,
-                        placeholder: (context, url) => const CircularProgressIndicator(),
-                        errorWidget: (context, url, error) => const Icon(Icons.image_not_supported, size: 100, color: Colors.grey),
-                      )
-                    : const Icon(Icons.image_not_supported, size: 100, color: Colors.grey),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8.0),
-              child: Text(
-                product.name,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                  color: Colors.black,
-                  fontFamily: 'Poppins',
+      );
+    },
+    child: Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: const [
+          BoxShadow(
+            color: Colors.black12,
+            blurRadius: 4,
+            offset: Offset(2, 2),
+          ),
+        ],
+      ),
+      child: Stack(
+        alignment: Alignment.topRight,
+        children: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: product.imagePath != null && product.imagePath!.isNotEmpty
+                      ? CachedNetworkImage(
+                          imageUrl: product.imagePath!,
+                          fit: BoxFit.contain,
+                          placeholder: (context, url) =>
+                              const CircularProgressIndicator(),
+                          errorWidget: (context, url, error) =>
+                              const Icon(Icons.image_not_supported, size: 100, color: Colors.grey),
+                        )
+                      : const Icon(Icons.image_not_supported, size: 100, color: Colors.grey),
                 ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8.0),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                child: Text(
+                  product.name,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                    color: Colors.black,
+                    fontFamily: 'Poppins',
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                decoration: const BoxDecoration(
+                  color: Color(0xFF00296B),
+                  borderRadius: BorderRadius.only(
+                    bottomLeft: Radius.circular(12),
+                    bottomRight: Radius.circular(12),
+                  ),
+                ),
+                child: Center(
                   child: Text(
-                    product.name,
-                    textAlign: TextAlign.center,
+                    "\$ ${product.price}",
                     style: const TextStyle(
+                      color: Colors.white,
                       fontWeight: FontWeight.bold,
                       fontSize: 16,
-                      color: Colors.black,
                       fontFamily: 'Poppins',
                     ),
                   ),
                 ),
-                const SizedBox(height: 8),
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(vertical: 10),
-                  decoration: const BoxDecoration(
-                    color: Color(0xFF00296B),
-                    borderRadius: BorderRadius.only(
-                      bottomLeft: Radius.circular(12),
-                      bottomRight: Radius.circular(12),
-                    ),
-                  ),
-                  child: Center(
-                    child: Text(
-                      "\$ ${product.price}",
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                        fontFamily: 'Poppins',
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            IconButton(
-              icon: Icon(
-                isFavorite ? Icons.favorite : Icons.favorite_border,
-                color: isFavorite ? Colors.red : Colors.grey,
-                size: 30,
               ),
-              onPressed: () {
-                setState(() {
-                  // Usamos el nombre del producto como identificador
-                  _controller.toggleFavorite(product.name);
-                });
-              },
+            ],
+          ),
+          IconButton(
+            icon: Icon(
+              isFavorite ? Icons.favorite : Icons.favorite_border,
+              color: isFavorite ? Colors.red : Colors.grey,
+              size: 30,
             ),
-          ],
-        ),
+            onPressed: () {
+              setState(() {
+                _controller.toggleFavorite(product.name);
+              });
+            },
+          ),
+        ],
       ),
-    );
-  }
+    ),
+  );
+}
 }
