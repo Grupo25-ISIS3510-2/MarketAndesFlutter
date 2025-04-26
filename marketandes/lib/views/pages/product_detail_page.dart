@@ -5,6 +5,8 @@ import 'package:marketandes/views/pages/rating_form_page.dart';
 import 'package:marketandes/controllers/product_detail_controller.dart';
 import 'package:marketandes/views/pages/chat_page.dart';
 import 'package:marketandes/views/widget_tree.dart';
+import 'package:flutter_cache_manager/flutter_cache_manager.dart';
+import 'dart:io';
 
 class ProductDetailPage extends StatelessWidget {
   final Product product;
@@ -33,7 +35,19 @@ class ProductDetailPage extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             if (product.imagePath != null)
-              Image.network(product.imagePath!, height: 200, fit: BoxFit.contain),
+              FutureBuilder<File>(
+                future: DefaultCacheManager().getSingleFile(product.imagePath!),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.done && snapshot.hasData) {
+                    return Image.file(snapshot.data!, height: 200, fit: BoxFit.contain);
+                  } else {
+                    return const SizedBox(
+                      height: 200,
+                      child: Center(child: CircularProgressIndicator()),
+                    );
+                  }
+                },
+              ),
             const SizedBox(height: 10),
             Text(
               product.name,
