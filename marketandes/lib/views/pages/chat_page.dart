@@ -187,7 +187,7 @@ class _ChatPageState extends State<ChatPage> {
 
                                         await controller.cerrarChat(chat.id);
 
-                                        // 🔥 Fuerza la recarga del FutureBuilder
+                                        //  Fuerza la recarga del FutureBuilder
                                         setState(() {});
 
                                         ScaffoldMessenger.of(
