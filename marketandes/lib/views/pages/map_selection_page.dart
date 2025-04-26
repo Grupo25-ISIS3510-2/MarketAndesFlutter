@@ -36,7 +36,7 @@ class _MapaSeleccionPageState extends State<MapaSeleccionPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Selecciona el punto real'),
+        title: const Text('Selecciona de encuentro con el vendedor'),
         backgroundColor: const Color(0xFF00296B),
       ),
       body: Stack(

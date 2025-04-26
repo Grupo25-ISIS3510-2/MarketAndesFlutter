@@ -128,7 +128,7 @@ class _ChatPageState extends State<ChatPage> {
                                           (context) => AlertDialog(
                                             title: const Text('Cerrar chat'),
                                             content: const Text(
-                                              '¿Deseas seleccionar el punto de encuentro real antes de cerrar?',
+                                              'Cual fue tu punto de encuentro con el comprador? Seleccionalo y ayudanos a mejorar',
                                             ),
                                             actions: [
                                               TextButton(
