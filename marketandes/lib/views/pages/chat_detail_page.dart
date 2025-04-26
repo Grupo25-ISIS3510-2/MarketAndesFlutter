@@ -48,9 +48,12 @@ class _ChatConversationPageState extends State<ChatConversationPage> {
   }
 
   Future<void> _sendMessage() async {
-    await _controller.sendMessage(_messageController.text);
+    final text = _messageController.text.trim();
+    if (text.isEmpty) return;
+
+    await _controller.sendMessage(text);
     _messageController.clear();
-    setState(() {}); // Refresca FutureBuilder tras enviar
+    setState(() {});
   }
 
   @override
@@ -108,8 +111,8 @@ class _ChatConversationPageState extends State<ChatConversationPage> {
   }
 
   Widget _buildMessages() {
-    return FutureBuilder<List<ChatMessage>>(
-      future: _controller.loadMessages(),
+    return StreamBuilder<List<ChatMessage>>(
+      stream: _controller.getMessagesStream(),
       builder: (context, snapshot) {
         if (!snapshot.hasData) {
           return const Center(child: CircularProgressIndicator());

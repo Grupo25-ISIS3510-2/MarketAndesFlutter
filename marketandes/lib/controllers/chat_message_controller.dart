@@ -21,7 +21,6 @@ class ChatController {
   bool get isProximityMode => _proximityMode;
   String get _localKey => 'chatMessages_$chatId';
 
-  // 🔆 Brillo / Proximidad
   Future<void> initBrightness() async {
     _previousBrightness = await ScreenBrightness().current;
   }
@@ -60,7 +59,6 @@ class ChatController {
     _stopListeningProximity();
   }
 
-  // ✉️ Enviar mensaje
   Future<void> sendMessage(String message) async {
     if (message.trim().isEmpty) return;
 
@@ -101,7 +99,58 @@ class ChatController {
     await _addMessageToLocal(msg);
   }
 
-  // 💾 Guardar mensaje local
+  Stream<List<ChatMessage>> getMessagesStream() async* {
+    final prefs = await SharedPreferences.getInstance();
+    final currentRaw = prefs.getString(_localKey);
+    List<ChatMessage> localMessages = [];
+
+    if (currentRaw != null) {
+      localMessages =
+          List<Map<String, dynamic>>.from(
+            jsonDecode(currentRaw),
+          ).map((m) => ChatMessage.fromMap(m)).toList();
+    }
+
+    // Emitir primero los mensajes locales
+    yield localMessages;
+
+    final isBuyer = await _isBuyer();
+    final sub = isBuyer ? 'lastMessageSelller' : 'lastMessageBuyer';
+
+    yield* _firestore
+        .collection('chatsFlutter')
+        .doc(chatId)
+        .collection(sub)
+        .doc('last')
+        .snapshots()
+        .asyncMap((snapshot) async {
+          if (!snapshot.exists) return localMessages;
+
+          final data = snapshot.data()!;
+          final alreadySeen = data['showed'] == true;
+
+          if (!alreadySeen) {
+            final newMessage = ChatMessage(
+              message: data['message'],
+              uuid: data['uuid'],
+              fecha: (data['fecha'] as Timestamp).toDate(),
+            );
+
+            // Guardar en local el nuevo mensaje
+            localMessages.add(newMessage);
+            await prefs.setString(
+              _localKey,
+              jsonEncode(localMessages.map((m) => m.toMap()).toList()),
+            );
+
+            // Marcar como mostrado en Firebase
+            await snapshot.reference.update({'showed': true});
+          }
+
+          return localMessages;
+        });
+  }
+
   Future<void> _addMessageToLocal(ChatMessage message) async {
     final prefs = await SharedPreferences.getInstance();
     final currentRaw = prefs.getString(_localKey);
@@ -114,7 +163,6 @@ class ChatController {
     await prefs.setString(_localKey, jsonEncode(localMsgs));
   }
 
-  // 📨 Cargar mensajes locales y añadir nuevo si existe en Firebase
   Future<List<ChatMessage>> loadMessages() async {
     final prefs = await SharedPreferences.getInstance();
     final currentRaw = prefs.getString(_localKey);
@@ -161,7 +209,7 @@ class ChatController {
         }
       }
     } catch (_) {
-      print('⚠️ Error de conexión. Usando solo datos locales.');
+      print('Error de conexión. Usando solo datos locales.');
     }
 
     return localMessages;
