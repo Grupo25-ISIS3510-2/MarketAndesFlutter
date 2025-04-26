@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:marketandes/models/product_model.dart';
 import 'package:marketandes/controllers/product_controller.dart';
 import 'package:marketandes/views/pages/product_detail_page.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -112,7 +113,6 @@ class _HomePageState extends State<HomePage> {
           MaterialPageRoute(
           builder: (_) => ProductDetailPage(product: product),
         ),
-
         );
       },
       child: Container(
@@ -134,10 +134,11 @@ class _HomePageState extends State<HomePage> {
               child: Padding(
                 padding: const EdgeInsets.all(8.0),
                 child: product.imagePath != null && product.imagePath!.isNotEmpty
-                    ? Image.network(
-                        product.imagePath!,
+                    ? CachedNetworkImage(
+                        imageUrl: product.imagePath!,
                         fit: BoxFit.contain,
-                        errorBuilder: (_, __, ___) => const Icon(Icons.image_not_supported, size: 100, color: Colors.grey),
+                        placeholder: (context, url) => const CircularProgressIndicator(),
+                        errorWidget: (context, url, error) => const Icon(Icons.image_not_supported, size: 100, color: Colors.grey),
                       )
                     : const Icon(Icons.image_not_supported, size: 100, color: Colors.grey),
               ),
