@@ -8,4 +8,8 @@ class LoginRegisterController {
   void goToRegister(BuildContext context) {
     Navigator.pushNamed(context, '/register');
   }
+
+  void goToOfflineUsers(BuildContext context) {
+    Navigator.pushNamed(context, '/offlineLogin');
+  }
 }
