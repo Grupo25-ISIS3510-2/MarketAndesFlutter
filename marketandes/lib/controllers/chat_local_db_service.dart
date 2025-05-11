@@ -29,11 +29,12 @@ class ChatLocalDbService {
 
     await db.execute('''
       CREATE TABLE chats (
-        chat_id TEXT PRIMARY KEY,
-        user_id TEXT,
-        chat_data TEXT,
-        user_data TEXT
-      );
+      chat_id TEXT,
+      user_id TEXT,
+      chat_data TEXT,
+      user_data TEXT,
+      PRIMARY KEY (chat_id, user_id)
+    );
     ''');
   }
 

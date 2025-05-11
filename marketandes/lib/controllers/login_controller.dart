@@ -35,34 +35,34 @@ class LoginController {
       sessionStartTime = DateTime.now();
 
       // Mostrar diálogo para guardar offline
-      final shouldSave = await showDialog<bool>(
-        context: context,
-        builder:
-            (context) => AlertDialog(
-              title: const Text("¿Guardar usuario para uso sin conexión?"),
-              content: const Text(
-                "Esto te permitirá iniciar sesión sin internet desde este dispositivo.",
-              ),
-              actions: [
-                TextButton(
-                  child: const Text("No"),
-                  onPressed: () => Navigator.of(context).pop(false),
-                ),
-                ElevatedButton(
-                  child: const Text("Sí, guardar"),
-                  onPressed: () => Navigator.of(context).pop(true),
-                ),
-              ],
-            ),
-      );
+      final box = Hive.box('offlineUsers');
+      final alreadySaved = box.values.any((entry) => entry['email'] == email);
 
-      if (shouldSave == true) {
-        final box = Hive.box('offlineUsers');
-        box.put(uid, {
-          'uid': uid,
-          'email': email,
-          'password': password, // puedes encriptarlo si deseas
-        });
+      if (!alreadySaved) {
+        final shouldSave = await showDialog<bool>(
+          context: context,
+          builder:
+              (context) => AlertDialog(
+                title: const Text("¿Guardar usuario para uso sin conexión?"),
+                content: const Text(
+                  "Esto te permitirá iniciar sesión sin internet desde este dispositivo.",
+                ),
+                actions: [
+                  TextButton(
+                    child: const Text("No"),
+                    onPressed: () => Navigator.of(context).pop(false),
+                  ),
+                  ElevatedButton(
+                    child: const Text("Sí, guardar"),
+                    onPressed: () => Navigator.of(context).pop(true),
+                  ),
+                ],
+              ),
+        );
+
+        if (shouldSave == true) {
+          box.put(uid, {'uid': uid, 'email': email, 'password': password});
+        }
       }
 
       Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
