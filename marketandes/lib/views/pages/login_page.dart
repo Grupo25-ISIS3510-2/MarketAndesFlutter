@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import '../../models/login_model.dart';
 import '../../controllers/login_controller.dart';
 import 'login_register.dart';
@@ -13,11 +14,52 @@ class LoginPage extends StatefulWidget {
 class _LoginPageState extends State<LoginPage> {
   final LoginModel model = LoginModel();
   late LoginController controller;
+  bool isConnected = true;
+  late final Connectivity _connectivity;
+  late final Stream<ConnectivityResult> _connectivityStream;
 
   @override
   void initState() {
     super.initState();
     controller = LoginController(model: model, context: context);
+
+    _connectivity = Connectivity();
+    _connectivityStream = _connectivity.onConnectivityChanged;
+
+    _checkInitialConnection();
+    _listenToConnectivity();
+  }
+
+  Future<void> _checkInitialConnection() async {
+    final result = await _connectivity.checkConnectivity();
+    setState(() {
+      isConnected = result != ConnectivityResult.none;
+    });
+  }
+
+  void _listenToConnectivity() {
+    _connectivityStream.listen((ConnectivityResult result) {
+      final nowConnected = result != ConnectivityResult.none;
+      if (nowConnected != isConnected) {
+        setState(() {
+          isConnected = nowConnected;
+        });
+
+        final message =
+            nowConnected
+                ? '✅ Has recuperado la conexión a internet'
+                : '⚠️ No hay conexión a internet';
+        final color = nowConnected ? Colors.green : Colors.red;
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(message),
+            backgroundColor: color,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    });
   }
 
   @override
@@ -63,29 +105,22 @@ class _LoginPageState extends State<LoginPage> {
                             children: [
                               const Text(
                                 "Email",
+
                                 style: TextStyle(
-                                  fontFamily: 'Poppins',
                                   color: Colors.black,
+                                  fontFamily: 'Poppins',
                                   fontWeight: FontWeight.bold,
-                                  fontSize: 16,
                                 ),
                               ),
                               const SizedBox(height: 10),
-                              SizedBox(
-                                height: 40,
-                                child: TextField(
-                                  controller: model.emailController,
-                                  keyboardType: TextInputType.emailAddress,
-                                  style: const TextStyle(color: Colors.black87),
-                                  decoration: InputDecoration(
-                                    hintText: "example@uniandes.edu.co",
-                                    contentPadding: const EdgeInsets.symmetric(
-                                      vertical: 0,
-                                      horizontal: 12,
-                                    ),
-                                    border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
+                              TextField(
+                                controller: model.emailController,
+                                keyboardType: TextInputType.emailAddress,
+                                style: TextStyle(color: Colors.black),
+                                decoration: InputDecoration(
+                                  hintText: "example@uniandes.edu.co",
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(8),
                                   ),
                                 ),
                               ),
@@ -93,58 +128,45 @@ class _LoginPageState extends State<LoginPage> {
                               const Text(
                                 "Contraseña",
                                 style: TextStyle(
-                                  fontFamily: 'Poppins',
                                   color: Colors.black,
+                                  fontFamily: 'Poppins',
                                   fontWeight: FontWeight.bold,
-                                  fontSize: 16,
                                 ),
                               ),
                               const SizedBox(height: 10),
-                              SizedBox(
-                                height: 40,
-                                child: TextField(
-                                  controller: model.passwordController,
-                                  obscureText: true,
-                                  style: const TextStyle(color: Colors.black87),
-                                  decoration: InputDecoration(
-                                    hintText: "password",
-                                    contentPadding: const EdgeInsets.symmetric(
-                                      vertical: 0,
-                                      horizontal: 12,
-                                    ),
-                                    border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
+                              TextField(
+                                controller: model.passwordController,
+                                obscureText: true,
+                                style: TextStyle(color: Colors.black),
+                                decoration: InputDecoration(
+                                  hintText: "password",
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(8),
                                   ),
                                 ),
                               ),
                               const SizedBox(height: 15),
-                              if (model.errorMessage != null)
-                                Padding(
-                                  padding: const EdgeInsets.only(bottom: 10),
-                                  child: Text(
-                                    model.errorMessage!,
-                                    style: const TextStyle(
-                                      color: Colors.red,
-                                      fontSize: 14,
-                                    ),
-                                  ),
+                              if (!isConnected)
+                                const Text(
+                                  "⚠️ No tienes conexión a internet",
+                                  style: TextStyle(color: Colors.red),
                                 ),
+                              const SizedBox(height: 10),
                               SizedBox(
                                 width: double.infinity,
                                 child: ElevatedButton(
+                                  onPressed:
+                                      model.isLoading || !isConnected
+                                          ? null
+                                          : () => controller.login(
+                                            () => setState(() {}),
+                                          ),
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: const Color(0xFF00296B),
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(6),
                                     ),
                                   ),
-                                  onPressed:
-                                      model.isLoading
-                                          ? null
-                                          : () => controller.login(
-                                            () => setState(() {}),
-                                          ),
                                   child:
                                       model.isLoading
                                           ? const CircularProgressIndicator(
@@ -155,8 +177,6 @@ class _LoginPageState extends State<LoginPage> {
                                             style: TextStyle(
                                               color: Colors.white,
                                               fontFamily: 'Poppins',
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 15,
                                             ),
                                           ),
                                 ),
@@ -179,7 +199,9 @@ class _LoginPageState extends State<LoginPage> {
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => LoginRegisterPage()),
+                  MaterialPageRoute(
+                    builder: (context) => const LoginRegisterPage(),
+                  ),
                 );
               },
             ),
