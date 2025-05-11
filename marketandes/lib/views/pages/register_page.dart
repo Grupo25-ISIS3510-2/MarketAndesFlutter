@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:marketandes/controllers/register_controller.dart';
 
 class RegisterPage extends StatefulWidget {
@@ -11,7 +12,19 @@ class RegisterPage extends StatefulWidget {
 class _RegisterPageState extends State<RegisterPage> {
   final RegisterController controller = RegisterController();
   bool isLoading = false;
+  bool isConnected = true;
   String? errorMessage;
+
+  final Connectivity _connectivity = Connectivity();
+  late final Stream<ConnectivityResult> _connectivityStream;
+
+  @override
+  void initState() {
+    super.initState();
+    _connectivityStream = _connectivity.onConnectivityChanged;
+    _checkInitialConnection();
+    _listenToConnectivity();
+  }
 
   void _toggleLoading() {
     setState(() {
@@ -22,6 +35,38 @@ class _RegisterPageState extends State<RegisterPage> {
   void _setError(String? msg) {
     setState(() {
       errorMessage = msg;
+    });
+  }
+
+  Future<void> _checkInitialConnection() async {
+    final result = await _connectivity.checkConnectivity();
+    setState(() {
+      isConnected = result != ConnectivityResult.none;
+    });
+  }
+
+  void _listenToConnectivity() {
+    _connectivityStream.listen((ConnectivityResult result) {
+      final nowConnected = result != ConnectivityResult.none;
+      if (nowConnected != isConnected) {
+        setState(() {
+          isConnected = nowConnected;
+        });
+
+        final message =
+            nowConnected
+                ? '✅ Has recuperado la conexión a internet'
+                : '⚠️ No hay conexión a internet';
+        final color = nowConnected ? Colors.green : Colors.red;
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(message),
+            backgroundColor: color,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
     });
   }
 
@@ -90,9 +135,14 @@ class _RegisterPageState extends State<RegisterPage> {
                                 maxLegth: 60,
                               ),
                               const SizedBox(height: 15),
+                              if (!isConnected)
+                                const Text(
+                                  "⚠️ No tienes conexión a internet",
+                                  style: TextStyle(color: Colors.red),
+                                ),
                               if (errorMessage != null)
                                 Padding(
-                                  padding: const EdgeInsets.only(bottom: 10),
+                                  padding: const EdgeInsets.only(top: 10),
                                   child: Text(
                                     errorMessage!,
                                     style: const TextStyle(
@@ -101,17 +151,12 @@ class _RegisterPageState extends State<RegisterPage> {
                                     ),
                                   ),
                                 ),
+                              const SizedBox(height: 10),
                               SizedBox(
                                 width: double.infinity,
                                 child: ElevatedButton(
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: const Color(0xFF00296B),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(6),
-                                    ),
-                                  ),
                                   onPressed:
-                                      isLoading
+                                      isLoading || !isConnected
                                           ? null
                                           : () {
                                             controller.register(
@@ -120,6 +165,12 @@ class _RegisterPageState extends State<RegisterPage> {
                                               _setError,
                                             );
                                           },
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFF00296B),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                  ),
                                   child:
                                       isLoading
                                           ? const CircularProgressIndicator(
@@ -185,7 +236,7 @@ class _RegisterPageState extends State<RegisterPage> {
             controller: controller,
             obscureText: obscure,
             maxLength: maxLegth,
-            style: const TextStyle(color: Colors.black87),
+            style: const TextStyle(color: Colors.black),
             decoration: InputDecoration(
               hintText: hint,
               counterText: '',
