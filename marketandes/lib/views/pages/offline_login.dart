@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../../models/login_model.dart';
 import '../../controllers/login_controller.dart';
 import 'login_register.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+import '../../controllers/auth_controller.dart';
 
 class OfflineLoginPage extends StatefulWidget {
   const OfflineLoginPage({super.key});
@@ -11,6 +13,22 @@ class OfflineLoginPage extends StatefulWidget {
 }
 
 class _OfflineLoginPageState extends State<OfflineLoginPage> {
+  Future<void> _loadLocalUsers() async {
+    final box = Hive.box('offlineUsers');
+
+    // Obtenemos los valores (mapas) y extraemos los emails
+    final users =
+        box.values
+            .map((entry) => entry['email'] as String?)
+            .whereType<String>()
+            .toList();
+
+    setState(() {
+      localUsers = users;
+      if (users.isNotEmpty) selectedUser = users.first;
+    });
+  }
+
   final LoginModel model = LoginModel();
   late LoginController controller;
 
@@ -22,12 +40,7 @@ class _OfflineLoginPageState extends State<OfflineLoginPage> {
   void initState() {
     super.initState();
     controller = LoginController(model: model, context: context);
-    // TODO: Aquí luego cargarás desde SQLite
-    localUsers = [
-      "Juan",
-      "Miguel",
-      "Efrain",
-    ]; // ← reemplazar luego por usuarios locales
+    _loadLocalUsers();
   }
 
   @override
@@ -161,7 +174,43 @@ class _OfflineLoginPageState extends State<OfflineLoginPage> {
                                   onPressed:
                                       model.isLoading || selectedUser == null
                                           ? null
-                                          : () => {},
+                                          : () async {
+                                            setState(() {
+                                              model.isLoading = true;
+                                              model.errorMessage = null;
+                                            });
+
+                                            try {
+                                              await authService.value
+                                                  .signInSafe(
+                                                    email: selectedUser!,
+                                                    password:
+                                                        model
+                                                            .passwordController
+                                                            .text
+                                                            .trim(),
+                                                  );
+
+                                              Navigator.pushNamedAndRemoveUntil(
+                                                context,
+                                                '/home',
+                                                (_) => false,
+                                              );
+                                            } catch (e) {
+                                              setState(() {
+                                                model.errorMessage = e
+                                                    .toString()
+                                                    .replaceFirst(
+                                                      'Exception: ',
+                                                      '',
+                                                    );
+                                              });
+                                            } finally {
+                                              setState(
+                                                () => model.isLoading = false,
+                                              );
+                                            }
+                                          },
                                   child:
                                       model.isLoading
                                           ? const CircularProgressIndicator(
