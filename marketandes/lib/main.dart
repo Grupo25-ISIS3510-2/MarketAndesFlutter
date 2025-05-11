@@ -16,10 +16,6 @@ import 'package:hive_flutter/hive_flutter.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-  FirebaseFirestore.instance.settings = const Settings(
-    persistenceEnabled: true,
-    cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
-  );
   await Hive.initFlutter();
   await Hive.openBox('offlineUsers');
   runApp(const MyApp());
