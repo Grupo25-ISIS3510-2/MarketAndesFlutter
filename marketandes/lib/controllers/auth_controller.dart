@@ -7,6 +7,7 @@ import 'session_state_controller.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
 ValueNotifier<AuthService> authService = ValueNotifier(AuthService());
+bool isOfflineLogin = false;
 
 class AuthService {
   final FirebaseAuth firebaseAuth = FirebaseAuth.instance;
@@ -55,6 +56,7 @@ class AuthService {
     required String email,
     required String password,
   }) async {
+    isOfflineLogin = true;
     try {
       // Intenta login en línea
       final credential = await firebaseAuth.signInWithEmailAndPassword(
@@ -95,17 +97,24 @@ class AuthService {
     required String email,
     required String password,
   }) async {
-    final credential = await firebaseAuth.signInWithEmailAndPassword(
-      email: email,
-      password: password,
-    );
+    isOfflineLogin = false;
 
-    final uid = credential.user?.uid ?? "";
-    currentUserUuid.value = uid;
+    try {
+      final credential = await firebaseAuth.signInWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
 
-    await _registerEvent('login', uid);
+      final uid = credential.user?.uid ?? "";
+      currentUserUuid.value = uid;
 
-    return credential;
+      await _registerEvent('login', uid);
+
+      return credential;
+    } catch (e) {
+      debugPrint("❌ Error en signIn normal: $e");
+      rethrow;
+    }
   }
 
   Future<UserCredential> createAccount({

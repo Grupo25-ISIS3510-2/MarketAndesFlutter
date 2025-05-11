@@ -9,7 +9,9 @@ import 'package:marketandes/views/pages/login_page.dart';
 import 'package:marketandes/views/widgets/navbar_widget.dart';
 import 'package:marketandes/controllers/session_state_controller.dart';
 import 'package:marketandes/views/pages/favorites_page.dart';
-
+import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:marketandes/controllers/auth_controller.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 
 class HomeWithNavbar extends StatefulWidget {
   final int selectedIndex;
@@ -22,6 +24,10 @@ class HomeWithNavbar extends StatefulWidget {
 
 class _HomeWithNavbarState extends State<HomeWithNavbar> {
   late int _selectedIndex;
+  bool isConnected = true;
+  late final Connectivity _connectivity;
+  late final Stream<ConnectivityResult> _connectivityStream;
+  bool _alreadyRetried = false;
   bool _mostrarCuadroComprador = false;
   bool _mostrarCuadroVendedor = false;
   List<String> _productosPendientes = [];
@@ -37,6 +43,92 @@ class _HomeWithNavbarState extends State<HomeWithNavbar> {
     _selectedIndex = widget.selectedIndex;
     _revisarComprasPendientes();
     _revisarVentasPendientes();
+    _connectivity = Connectivity();
+    _connectivityStream = _connectivity.onConnectivityChanged;
+
+    _checkInitialConnection();
+
+    if (isOfflineLogin) {
+      _listenToConnectivity();
+    }
+  }
+
+  Future<void> _checkInitialConnection() async {
+    final result = await _connectivity.checkConnectivity();
+    setState(() {
+      isConnected = result != ConnectivityResult.none;
+    });
+
+    if (!isConnected) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("⚠️ Estás conectado offline"),
+          backgroundColor: Colors.orange,
+          duration: Duration(seconds: 3),
+        ),
+      );
+    }
+  }
+
+  void _listenToConnectivity() {
+    _connectivityStream.listen((ConnectivityResult result) async {
+      final nowConnected = result != ConnectivityResult.none;
+      if (nowConnected && !isConnected) {
+        setState(() {
+          isConnected = true;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("✅ Has recuperado la conexión. Recargando..."),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 2),
+          ),
+        );
+
+        if (!_alreadyRetried) {
+          _alreadyRetried = true;
+
+          try {
+            final box = Hive.box('offlineUsers');
+            final offline = box.get(currentUserUuid.value);
+
+            if (offline != null) {
+              await authService.value.signInSafe(
+                email: offline['email'],
+                password: offline['password'],
+              );
+
+              // 🔽🔽🔽 INSERTAR DESDE AQUÍ 🔽🔽🔽
+              if (mounted) {
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const HomeWithNavbar(),
+                  ),
+                );
+              }
+              // 🔼🔼🔼 HASTA AQUÍ 🔼🔼🔼
+            }
+          } catch (e) {
+            debugPrint("❌ Error al intentar re-autenticar: $e");
+          }
+        }
+      } else if (!nowConnected) {
+        setState(() {
+          isConnected = false;
+          _alreadyRetried = false;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("⚠️ Estás desconectado de internet"),
+            backgroundColor: Colors.red,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    });
   }
 
   void _onItemTapped(int index) {
@@ -283,54 +375,57 @@ class _HomeWithNavbarState extends State<HomeWithNavbar> {
         ),
         centerTitle: true,
       ),
-drawer: Drawer(
-  child: ListView(
-    padding: EdgeInsets.zero,
-    children: [
-      DrawerHeader(
-        decoration: const BoxDecoration(color: Color(0xFF00296B)),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: const [
-            Text(
-              "MarketAndes",
-              style: TextStyle(color: Colors.white, fontSize: 24),
+      drawer: Drawer(
+        child: ListView(
+          padding: EdgeInsets.zero,
+          children: [
+            DrawerHeader(
+              decoration: const BoxDecoration(color: Color(0xFF00296B)),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: const [
+                  Text(
+                    "MarketAndes",
+                    style: TextStyle(color: Colors.white, fontSize: 24),
+                  ),
+                  SizedBox(height: 10),
+                  Text(
+                    "Opciones",
+                    style: TextStyle(color: Colors.white70, fontSize: 16),
+                  ),
+                ],
+              ),
             ),
-            SizedBox(height: 10),
-            Text(
-              "Opciones",
-              style: TextStyle(color: Colors.white70, fontSize: 16),
+            ListTile(
+              leading: const Icon(Icons.favorite, color: Colors.black),
+              title: const Text("Ver favoritos"),
+              onTap: () {
+                Navigator.pop(context); // Cierra el drawer
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const FavoritesPage(),
+                  ),
+                );
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.map, color: Colors.black),
+              title: const Text("Mapa"),
+              onTap:
+                  () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const MapPage()),
+                  ),
+            ),
+            ListTile(
+              leading: const Icon(Icons.exit_to_app, color: Colors.red),
+              title: const Text("Cerrar sesión"),
+              onTap: () => _logout(context),
             ),
           ],
         ),
       ),
-      ListTile(
-        leading: const Icon(Icons.favorite, color: Colors.black),
-        title: const Text("Ver favoritos"),
-        onTap: () {
-          Navigator.pop(context); // Cierra el drawer
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const FavoritesPage()),
-          );
-        },
-      ),
-      ListTile(
-        leading: const Icon(Icons.map, color: Colors.black),
-        title: const Text("Mapa"),
-        onTap: () => Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const MapPage()),
-        ),
-      ),
-      ListTile(
-        leading: const Icon(Icons.exit_to_app, color: Colors.red),
-        title: const Text("Cerrar sesión"),
-        onTap: () => _logout(context),
-      ),
-    ],
-  ),
-),
       body: Stack(
         children: [
           IndexedStack(index: _selectedIndex, children: _pages),
