@@ -110,7 +110,7 @@ class ChatController {
       await _saveMessagesLocally();
       _messagesController.add(List.from(_messages));
     } catch (e) {
-      print('⛔ Error enviando mensaje: $e');
+      print(' Error enviando mensaje: $e');
     }
   }
 
@@ -142,10 +142,19 @@ class ChatController {
             fecha: (data['fecha'] as Timestamp).toDate(),
             pending: false,
           );
+          final yaExiste = _messages.any(
+            (m) =>
+                m.message == newMessage.message &&
+                m.uuid == newMessage.uuid &&
+                m.fecha.difference(newMessage.fecha).inMilliseconds.abs() <
+                    1000,
+          );
 
-          _messages.add(newMessage);
-          await _saveMessagesLocally();
-          _messagesController.add(List.from(_messages));
+          if (!yaExiste) {
+            _messages.add(newMessage);
+            await _saveMessagesLocally();
+            _messagesController.add(List.from(_messages));
+          }
 
           await lastSnapshot.reference.update({'showed': true});
         }

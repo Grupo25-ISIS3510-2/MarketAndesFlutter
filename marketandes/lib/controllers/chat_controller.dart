@@ -9,23 +9,30 @@ class ChatController {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   Future<void> cerrarChat(String chatId) async {
-    final doc = await _firestore.collection('chatsFlutter').doc(chatId).get();
+    // Uso de Future con handler (then + catchError)
+    await _firestore
+        .collection('chatsFlutter')
+        .doc(chatId)
+        .get()
+        .then((doc) async {
+          if (!doc.exists) return;
 
-    if (!doc.exists) return;
+          final data = doc.data()!;
+          final compradorRef = data['uuidUser'] as DocumentReference;
+          final vendedorRef = data['uuidOwner'] as DocumentReference;
+          final now = Timestamp.now();
 
-    final data = doc.data()!;
-    final compradorRef = data['uuidUser'] as DocumentReference;
-    final vendedorRef = data['uuidOwner'] as DocumentReference;
-    final now = Timestamp.now();
+          // Uso de Future con async/await
+          await anadirTiempoRegistro(chatId);
 
-    await anadirTiempoRegistro(chatId);
+          await compradorRef.update({'lastUpdate': now});
+          await vendedorRef.update({'lastUpdate': now});
 
-    // Actualizar lastUpdate de ambos usuarios
-    await compradorRef.update({'lastUpdate': now});
-    await vendedorRef.update({'lastUpdate': now});
-
-    // Eliminar el chat
-    await _firestore.collection('chatsFlutter').doc(chatId).delete();
+          await _firestore.collection('chatsFlutter').doc(chatId).delete();
+        })
+        .catchError((e) {
+          print('Error al cerrar el chat: $e');
+        });
   }
 
   Future<void> anadirTiempoRegistro(String chatId) async {
