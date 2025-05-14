@@ -70,7 +70,7 @@ class MapaEncuentroController {
         });
   }
 
-  Future<List<LatLng>> obtenerRuta(LatLng inicio, LatLng fin) async {
+  Future<List<LatLng>> obtenerRuta(LatLng inicio, LatLng fin) {
     const apiKey = '5b3ce3597851110001cf624884acf4bb7f4849fda1b0d2d33d9cf0d1';
     final url = Uri.parse(
       'https://api.openrouteservice.org/v2/directions/foot-walking/geojson',
@@ -88,15 +88,29 @@ class MapaEncuentroController {
       'Content-Type': 'application/json',
     };
 
-    final response = await http.post(url, headers: headers, body: body);
+    // Retornamos un Future explícito con .then y .catchError
+    return Future(() async {
+          final response = await http.post(url, headers: headers, body: body);
 
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      final List<dynamic> coords =
-          data['features'][0]['geometry']['coordinates'];
-      return coords.map((c) => LatLng(c[1], c[0])).toList();
-    }
+          if (response.statusCode == 200) {
+            final data = jsonDecode(response.body);
+            final List<dynamic> coords =
+                data['features'][0]['geometry']['coordinates'];
+            return coords
+                .map<LatLng>((c) => LatLng(c[1].toDouble(), c[0].toDouble()))
+                .toList();
+          }
 
-    return [];
+          print('Respuesta no exitosa: ${response.statusCode}');
+          return <LatLng>[];
+        })
+        .then((resultado) {
+          print('Ruta obtenida exitosamente con ${resultado.length} puntos.');
+          return resultado;
+        })
+        .catchError((e) {
+          print('Error al obtener ruta: $e');
+          return <LatLng>[]; // devolvemos lista vacía en caso de error
+        });
   }
 }

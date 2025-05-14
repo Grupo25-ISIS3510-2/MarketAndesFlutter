@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
+import 'dart:async';
 import 'package:marketandes/controllers/register_controller.dart';
 
 class RegisterPage extends StatefulWidget {
@@ -13,6 +15,26 @@ class _RegisterPageState extends State<RegisterPage> {
   bool isLoading = false;
   String? errorMessage;
 
+  bool isConnected = true;
+  late final Connectivity _connectivity;
+  late final Stream<ConnectivityResult> _connectivityStream;
+  late final StreamSubscription<ConnectivityResult> _connectivitySubscription;
+
+  @override
+  void initState() {
+    super.initState();
+    _connectivity = Connectivity();
+    _connectivityStream = _connectivity.onConnectivityChanged;
+    _checkInitialConnection();
+    _listenToConnectivity();
+  }
+
+  @override
+  void dispose() {
+    _connectivitySubscription.cancel();
+    super.dispose();
+  }
+
   void _toggleLoading() {
     setState(() {
       isLoading = !isLoading;
@@ -22,6 +44,43 @@ class _RegisterPageState extends State<RegisterPage> {
   void _setError(String? msg) {
     setState(() {
       errorMessage = msg;
+    });
+  }
+
+  Future<void> _checkInitialConnection() async {
+    final result = await _connectivity.checkConnectivity();
+    if (!mounted) return;
+    setState(() {
+      isConnected = result != ConnectivityResult.none;
+    });
+  }
+
+  void _listenToConnectivity() {
+    _connectivitySubscription = _connectivityStream.listen((
+      ConnectivityResult result,
+    ) {
+      final nowConnected = result != ConnectivityResult.none;
+      if (!mounted) return;
+
+      if (nowConnected != isConnected) {
+        setState(() {
+          isConnected = nowConnected;
+        });
+
+        final message =
+            nowConnected
+                ? '✅ Conexión restablecida'
+                : '⚠️ Sin conexión a internet';
+        final color = nowConnected ? Colors.green : Colors.red;
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(message),
+            backgroundColor: color,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
     });
   }
 
@@ -90,6 +149,14 @@ class _RegisterPageState extends State<RegisterPage> {
                                 maxLegth: 60,
                               ),
                               const SizedBox(height: 15),
+                              if (!isConnected)
+                                const Padding(
+                                  padding: EdgeInsets.only(bottom: 8.0),
+                                  child: Text(
+                                    "⚠️ No tienes conexión a internet",
+                                    style: TextStyle(color: Colors.red),
+                                  ),
+                                ),
                               if (errorMessage != null)
                                 Padding(
                                   padding: const EdgeInsets.only(bottom: 10),
@@ -111,7 +178,7 @@ class _RegisterPageState extends State<RegisterPage> {
                                     ),
                                   ),
                                   onPressed:
-                                      isLoading
+                                      isLoading || !isConnected
                                           ? null
                                           : () {
                                             controller.register(

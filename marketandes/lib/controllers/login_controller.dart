@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:marketandes/controllers/auth_controller.dart';
 import 'package:marketandes/controllers/session_timer_controller.dart';
 import '../models/login_model.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 
 class LoginController {
   final LoginModel model;
@@ -26,8 +27,43 @@ class LoginController {
         );
       }
 
-      await authService.value.signIn(email: email, password: password);
+      final credential = await authService.value.signIn(
+        email: email,
+        password: password,
+      );
+      final uid = credential.user?.uid ?? '';
       sessionStartTime = DateTime.now();
+
+      // Mostrar diálogo para guardar offline
+      final box = Hive.box('offlineUsers');
+      final alreadySaved = box.values.any((entry) => entry['email'] == email);
+
+      if (!alreadySaved) {
+        final shouldSave = await showDialog<bool>(
+          context: context,
+          builder:
+              (context) => AlertDialog(
+                title: const Text("¿Guardar usuario para uso sin conexión?"),
+                content: const Text(
+                  "Esto te permitirá iniciar sesión sin internet desde este dispositivo.",
+                ),
+                actions: [
+                  TextButton(
+                    child: const Text("No"),
+                    onPressed: () => Navigator.of(context).pop(false),
+                  ),
+                  ElevatedButton(
+                    child: const Text("Sí, guardar"),
+                    onPressed: () => Navigator.of(context).pop(true),
+                  ),
+                ],
+              ),
+        );
+
+        if (shouldSave == true) {
+          box.put(uid, {'uid': uid, 'email': email, 'password': password});
+        }
+      }
 
       Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
     } on FirebaseAuthException catch (e) {

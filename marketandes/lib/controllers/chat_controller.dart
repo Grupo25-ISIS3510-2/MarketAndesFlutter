@@ -2,28 +2,37 @@ import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/chat_model.dart';
+import 'chat_local_db_service.dart';
 
 class ChatController {
+  final ChatLocalDbService _localDb = ChatLocalDbService();
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   Future<void> cerrarChat(String chatId) async {
-    final doc = await _firestore.collection('chatsFlutter').doc(chatId).get();
+    // Uso de Future con handler (then + catchError)
+    await _firestore
+        .collection('chatsFlutter')
+        .doc(chatId)
+        .get()
+        .then((doc) async {
+          if (!doc.exists) return;
 
-    if (!doc.exists) return;
+          final data = doc.data()!;
+          final compradorRef = data['uuidUser'] as DocumentReference;
+          final vendedorRef = data['uuidOwner'] as DocumentReference;
+          final now = Timestamp.now();
 
-    final data = doc.data()!;
-    final compradorRef = data['uuidUser'] as DocumentReference;
-    final vendedorRef = data['uuidOwner'] as DocumentReference;
-    final now = Timestamp.now();
+          // Uso de Future con async/await
+          await anadirTiempoRegistro(chatId);
 
-    await anadirTiempoRegistro(chatId);
+          await compradorRef.update({'lastUpdate': now});
+          await vendedorRef.update({'lastUpdate': now});
 
-    // Actualizar lastUpdate de ambos usuarios
-    await compradorRef.update({'lastUpdate': now});
-    await vendedorRef.update({'lastUpdate': now});
-
-    // Eliminar el chat
-    await _firestore.collection('chatsFlutter').doc(chatId).delete();
+          await _firestore.collection('chatsFlutter').doc(chatId).delete();
+        })
+        .catchError((e) {
+          print('Error al cerrar el chat: $e');
+        });
   }
 
   Future<void> anadirTiempoRegistro(String chatId) async {
@@ -40,13 +49,8 @@ class ChatController {
   Future<List<ChatModel>> getChats(String userId) async {
     print('[getChats] Iniciando para user: $userId');
 
-    final prefs = await SharedPreferences.getInstance();
-    final localUpdate = prefs.getString('lastUpdate_$userId');
-    final localDataRaw = prefs.getString('cachedChats_$userId');
-    final localData =
-        localDataRaw != null
-            ? List<Map<String, dynamic>>.from(jsonDecode(localDataRaw))
-            : [];
+    final localUpdate = await _localDb.getLastUpdate(userId);
+    final localData = await _localDb.getChats(userId);
 
     final userDoc = await _firestore.collection('users').doc(userId).get();
     final remoteUpdate = userDoc['lastUpdate'];
@@ -132,9 +136,7 @@ class ChatController {
           return {'chat': cleanedChat, 'userData': cleanedUser};
         }).toList();
 
-    await prefs.setString('cachedChats_$userId', jsonEncode(toCache));
-    await prefs.setString('lastUpdate_$userId', remoteUpdateStr);
-
+    await _localDb.saveChats(userId, remoteUpdateStr, toCache);
     print('[getChats] Guardado en local ${chatModels.length} chats');
 
     return chatModels;

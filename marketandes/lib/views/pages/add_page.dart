@@ -1,5 +1,7 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:marketandes/controllers/add_product_controller.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 
 class AddPage extends StatefulWidget {
   const AddPage({super.key});
@@ -17,16 +19,36 @@ class _AddPageState extends State<AddPage> {
   final imageUrlController = TextEditingController();
 
   final categories = [
-    "Arte", "Física", "Utensilios", "Diseño", "Lenguas",
-    "Ingeniería", "Libros", "Medicina", "Tecnología",
-    "Administración", "Software", "Música", "Arquitectura",
-    "Psicología", "Educación", "Química", "Economía",
-    "Comunicación", "Derecho", "Inglés",
+    "Arte",
+    "Física",
+    "Utensilios",
+    "Diseño",
+    "Lenguas",
+    "Ingeniería",
+    "Libros",
+    "Medicina",
+    "Tecnología",
+    "Administración",
+    "Software",
+    "Música",
+    "Arquitectura",
+    "Psicología",
+    "Educación",
+    "Química",
+    "Economía",
+    "Comunicación",
+    "Derecho",
+    "Inglés",
   ];
+
+  bool hasInternet = true;
+  bool showConnectionRestoredMessage = false;
+  StreamSubscription<ConnectivityResult>? _connectivitySubscription;
 
   @override
   void initState() {
     super.initState();
+
     controller = AddProductController(
       context: context,
       refreshUI: () => setState(() {}),
@@ -35,6 +57,42 @@ class _AddPageState extends State<AddPage> {
       priceController: priceController,
       imageUrlController: imageUrlController,
     );
+
+    _checkInitialConnection();
+    _connectivitySubscription = Connectivity().onConnectivityChanged.listen((
+      result,
+    ) {
+      final connected = result != ConnectivityResult.none;
+      if (connected != hasInternet) {
+        setState(() {
+          hasInternet = connected;
+
+          if (connected) {
+            showConnectionRestoredMessage = true;
+            Future.delayed(const Duration(seconds: 10), () {
+              if (mounted) {
+                setState(() {
+                  showConnectionRestoredMessage = false;
+                });
+              }
+            });
+          }
+        });
+      }
+    });
+  }
+
+  Future<void> _checkInitialConnection() async {
+    final result = await Connectivity().checkConnectivity();
+    setState(() {
+      hasInternet = result != ConnectivityResult.none;
+    });
+  }
+
+  @override
+  void dispose() {
+    _connectivitySubscription?.cancel();
+    super.dispose();
   }
 
   @override
@@ -59,15 +117,27 @@ class _AddPageState extends State<AddPage> {
 
             const SizedBox(height: 20),
             _buildLabel("Adjunta el URL de las imágenes del producto"),
-            _buildTextField(imageUrlController, "Pega aquí el enlace de la imagen"),
+            _buildTextField(
+              imageUrlController,
+              "Pega aquí el enlace de la imagen",
+            ),
 
             const SizedBox(height: 20),
             _buildLabel("Descripción corta del producto"),
-            _buildTextField(descriptionController, "Escribe aquí la descripción...", maxLines: 5),
+            _buildTextField(
+              descriptionController,
+              "Escribe aquí la descripción...",
+              maxLines: 5,
+            ),
 
             const SizedBox(height: 20),
             _buildLabel("Precio del producto"),
-            _buildTextField(priceController, "Ingresa el precio", keyboardType: TextInputType.number, prefixText: "\$ "),
+            _buildTextField(
+              priceController,
+              "Ingresa el precio",
+              keyboardType: TextInputType.number,
+              prefixText: "\$ ",
+            ),
 
             const SizedBox(height: 20),
             _buildLabel("Categoría del producto"),
@@ -82,12 +152,13 @@ class _AddPageState extends State<AddPage> {
                 value: controller.selectedCategory,
                 hint: const Text("Selecciona una categoría"),
                 decoration: const InputDecoration(border: InputBorder.none),
-                items: categories.map((category) {
-                  return DropdownMenuItem<String>(
-                    value: category,
-                    child: Text(category),
-                  );
-                }).toList(),
+                items:
+                    categories.map((category) {
+                      return DropdownMenuItem<String>(
+                        value: category,
+                        child: Text(category),
+                      );
+                    }).toList(),
                 onChanged: controller.setCategory,
               ),
             ),
@@ -104,17 +175,23 @@ class _AddPageState extends State<AddPage> {
                       ),
                       padding: const EdgeInsets.symmetric(vertical: 14),
                     ),
-                    onPressed: controller.isSubmitting ? null : controller.submitProduct,
-                    child: controller.isSubmitting
-                        ? const CircularProgressIndicator(color: Colors.black)
-                        : const Text(
-                            "Publicar",
-                            style: TextStyle(
+                    onPressed:
+                        (!hasInternet || controller.isSubmitting)
+                            ? null
+                            : controller.submitProduct,
+                    child:
+                        controller.isSubmitting
+                            ? const CircularProgressIndicator(
                               color: Colors.black,
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
+                            )
+                            : const Text(
+                              "Publicar",
+                              style: TextStyle(
+                                color: Colors.black,
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
-                          ),
                   ),
                 ),
                 const SizedBox(width: 20),
@@ -140,6 +217,37 @@ class _AddPageState extends State<AddPage> {
                 ),
               ],
             ),
+
+            const SizedBox(height: 20),
+
+            if (!hasInternet || showConnectionRestoredMessage)
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                margin: const EdgeInsets.only(top: 10),
+                decoration: BoxDecoration(
+                  color:
+                      hasInternet ? Colors.green.shade100 : Colors.red.shade100,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: hasInternet ? Colors.green : Colors.red,
+                  ),
+                ),
+                child: Text(
+                  hasInternet
+                      ? "Conexión restaurada. Ya puedes publicar."
+                      : "Sin conexión a internet. No puedes publicar por ahora.",
+                  style: TextStyle(
+                    color:
+                        hasInternet
+                            ? Colors.green.shade800
+                            : Colors.red.shade800,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+
             const SizedBox(height: 30),
           ],
         ),

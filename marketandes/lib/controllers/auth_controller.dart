@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'session_state_controller.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 
 ValueNotifier<AuthService> authService = ValueNotifier(AuthService());
 
@@ -47,6 +48,46 @@ class AuthService {
       debugPrint('Evento registrado: $eventType para $uid');
     } catch (e) {
       debugPrint('Error registrando evento $eventType: $e');
+    }
+  }
+
+  Future<void> signInSafe({
+    required String email,
+    required String password,
+  }) async {
+    try {
+      // Intenta login en línea
+      final credential = await firebaseAuth.signInWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+
+      final uid = credential.user?.uid ?? "";
+      currentUserUuid.value = uid;
+
+      debugPrint("🟢 Inicio de sesión online con UID: $uid");
+    } catch (e) {
+      // Si falla (por ejemplo, sin conexión), intenta login offline
+      debugPrint("🔌 Login online fallido. Intentando offline...");
+
+      final box = await Hive.openBox('offlineUsers');
+      final userEntry = box.values.firstWhere(
+        (entry) => entry['email'] == email,
+        orElse: () => null,
+      );
+
+      if (userEntry == null) {
+        throw Exception("Usuario no encontrado localmente.");
+      }
+
+      if (userEntry['password'] != password) {
+        throw Exception("Contraseña incorrecta.");
+      }
+
+      currentUserUuid.value = userEntry['uid'];
+      debugPrint(
+        "🟠 Inicio de sesión offline con UID: ${currentUserUuid.value}",
+      );
     }
   }
 

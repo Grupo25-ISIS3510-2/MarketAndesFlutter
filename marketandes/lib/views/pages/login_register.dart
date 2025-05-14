@@ -76,6 +76,33 @@ class LoginRegisterPage extends StatelessWidget {
                         );
                       },
                     ),
+                    const SizedBox(height: 10),
+
+                    // ✅ BOTÓN NUEVO: USUARIOS SIN CONEXIÓN
+                    SizedBox(
+                      width: double.infinity,
+                      height: 45,
+                      child: OutlinedButton(
+                        style: OutlinedButton.styleFrom(
+                          side: const BorderSide(
+                            color: Color(0xFF00296B),
+                            width: 2,
+                          ),
+                        ),
+                        onPressed:
+                            () => controller.goToOfflineUsers(
+                              context,
+                            ), // ← crea esta función
+                        child: const Text(
+                          "USUARIOS SIN CONEXIÓN",
+                          style: TextStyle(
+                            fontFamily: "Poppins",
+                            color: Color(0xFF00296B),
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
 
                     const SizedBox(height: 10),
                     Center(
