@@ -34,20 +34,29 @@ class ProductDetailPage extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            if (product.imagePath != null)
-              FutureBuilder<File>(
-                future: DefaultCacheManager().getSingleFile(product.imagePath!),
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.done && snapshot.hasData) {
+           if (product.imagePath != null)
+            FutureBuilder<File>(
+              future: DefaultCacheManager().getSingleFile(product.imagePath!),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.done) {
+                  if (snapshot.hasData) {
                     return Image.file(snapshot.data!, height: 200, fit: BoxFit.contain);
                   } else {
-                    return const SizedBox(
+                    // Fallback: imagen no encontrada
+                    return Image.asset(
+                      'assets/images/image_not_found.png',
                       height: 200,
-                      child: Center(child: CircularProgressIndicator()),
+                      fit: BoxFit.contain,
                     );
                   }
-                },
-              ),
+                } else {
+                  return const SizedBox(
+                    height: 200,
+                    child: Center(child: CircularProgressIndicator()),
+                  );
+                }
+              },
+            ),
             const SizedBox(height: 10),
             Text(
               product.name,
