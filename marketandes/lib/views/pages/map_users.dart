@@ -70,8 +70,8 @@ class _MapaEncuentroPageState extends State<MapaEncuentroPage> {
       datosOtro['longitud'] ?? -74.065415,
     );
 
-    final lat = datosChat['latitudPuntoEncuentro'] ?? 4.601635;
-    final lng = datosChat['longitudPuntoEncuentro'] ?? -74.065415;
+    final lat = (datosChat['latitudPuntoEncuentro'] ?? 4.601635).toDouble();
+    final lng = (datosChat['longitudPuntoEncuentro'] ?? -74.065415).toDouble();
     print(lat);
     print(lng);
 
