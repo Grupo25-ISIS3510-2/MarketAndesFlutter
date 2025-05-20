@@ -22,7 +22,7 @@ class _FavoritesPageState extends State<FavoritesPage> {
 
   Future<void> _loadFavorites() async {
     await _controller.fetchUserPreferences(); // Actualiza la lista de favoritos
-    List<Product> allProducts = await _controller.fetchAllProducts(); // Carga todos los productos
+    List<Product> allProducts = await _controller.fetchAllProductsWithIsolate(); // Carga todos los productos
     setState(() {
       _favorites = allProducts
           .where((product) => _controller.userFavorites.contains(product.name))
