@@ -1,8 +1,9 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
-import 'dart:math';
+import 'package:connectivity_plus/connectivity_plus.dart';
 
 class MapPage extends StatefulWidget {
   const MapPage({super.key});
@@ -15,6 +16,9 @@ class _MapPageState extends State<MapPage> {
   late final MapController _mapController;
   LatLng? _currentPosition;
   double _heading = 0.0;
+  bool _hasConnection = true;
+  late final Connectivity _connectivity;
+  late final Stream<ConnectivityResult> _connectivityStream;
 
   final List<Map<String, dynamic>> _pointsOfInterest = [
     {
@@ -41,7 +45,26 @@ class _MapPageState extends State<MapPage> {
   void initState() {
     super.initState();
     _mapController = MapController();
+    _connectivity = Connectivity();
+    _checkInitialConnectivity();
+    _listenToConnectivity();
     _getUserLocation();
+  }
+
+  void _checkInitialConnectivity() async {
+    final result = await _connectivity.checkConnectivity();
+    setState(() {
+      _hasConnection = result != ConnectivityResult.none;
+    });
+  }
+
+  void _listenToConnectivity() {
+    _connectivityStream = _connectivity.onConnectivityChanged;
+    _connectivityStream.listen((ConnectivityResult result) {
+      setState(() {
+        _hasConnection = result != ConnectivityResult.none;
+      });
+    });
   }
 
   Future<void> _getUserLocation() async {
@@ -80,6 +103,35 @@ class _MapPageState extends State<MapPage> {
 
   @override
   Widget build(BuildContext context) {
+    if (!_hasConnection) {
+      return Scaffold(
+        backgroundColor: Colors.white,
+        appBar: AppBar(
+          backgroundColor: const Color(0xFF00296B),
+          title: const Text("Mapa con Puntos de Interés"),
+        ),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Image.asset(
+                'assets/images/NoInternet.jpg',
+                width: 200,
+                height: 200,
+                fit: BoxFit.contain,
+              ),
+              const SizedBox(height: 20),
+              const Text(
+                'No hay conexión a internet.\nNo es posible cargar el mapa.',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 16, color: Colors.black54),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(
         backgroundColor: const Color(0xFF00296B),
