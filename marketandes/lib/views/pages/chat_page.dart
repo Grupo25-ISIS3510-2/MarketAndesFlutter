@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import '../../controllers/chat_controller.dart';
 import '../../controllers/session_state_controller.dart';
 import '../../models/chat_model.dart';
@@ -16,6 +18,34 @@ class ChatPage extends StatefulWidget {
 
 class _ChatPageState extends State<ChatPage> {
   final ChatController controller = ChatController();
+  bool tieneConexion = true;
+  late StreamSubscription<ConnectivityResult> _connectivitySubscription;
+
+  @override
+  void initState() {
+    super.initState();
+    _verificarConexion();
+  }
+
+  void _verificarConexion() async {
+    final result = await Connectivity().checkConnectivity();
+    setState(() {
+      tieneConexion = result != ConnectivityResult.none;
+    });
+
+    _connectivitySubscription =
+        Connectivity().onConnectivityChanged.listen((result) {
+      setState(() {
+        tieneConexion = result != ConnectivityResult.none;
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _connectivitySubscription.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -87,18 +117,22 @@ class _ChatPageState extends State<ChatPage> {
                             children: [
                               IconButton(
                                 icon: const Icon(Icons.location_on_outlined),
-                                onPressed: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder:
-                                          (_) => MapaEncuentroPage(
-                                            nombreUsuario: chat.nombreUsuario,
-                                            chatId: chat.id,
+                                tooltip: tieneConexion
+                                    ? 'Ver mapa'
+                                    : 'Sin conexión',
+                                onPressed: tieneConexion
+                                    ? () {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (_) => MapaEncuentroPage(
+                                              nombreUsuario: chat.nombreUsuario,
+                                              chatId: chat.id,
+                                            ),
                                           ),
-                                    ),
-                                  );
-                                },
+                                        );
+                                      }
+                                    : null,
                               ),
                               IconButton(
                                 icon: const Icon(Icons.chat_bubble_outline),
@@ -106,13 +140,12 @@ class _ChatPageState extends State<ChatPage> {
                                   Navigator.push(
                                     context,
                                     MaterialPageRoute(
-                                      builder:
-                                          (_) => ChatConversationPage(
-                                            chatId: chat.id,
-                                            userName: chat.nombreUsuario,
-                                            userPhotoUrl: chat.userPhotoUrl,
-                                            razon: chat.razon,
-                                          ),
+                                      builder: (_) => ChatConversationPage(
+                                        chatId: chat.id,
+                                        userName: chat.nombreUsuario,
+                                        userPhotoUrl: chat.userPhotoUrl,
+                                        razon: chat.razon,
+                                      ),
                                     ),
                                   );
                                 },
@@ -124,46 +157,36 @@ class _ChatPageState extends State<ChatPage> {
                                   onPressed: () async {
                                     final confirmar = await showDialog<bool>(
                                       context: context,
-                                      builder:
-                                          (context) => AlertDialog(
-                                            title: const Text('Cerrar chat'),
-                                            content: const Text(
-                                              'Cual fue tu punto de encuentro con el comprador? Seleccionalo y ayudanos a mejorar',
-                                            ),
-                                            actions: [
-                                              TextButton(
-                                                onPressed:
-                                                    () => Navigator.pop(
-                                                      context,
-                                                      false,
-                                                    ),
-                                                child: const Text('Cancelar'),
-                                              ),
-                                              TextButton(
-                                                onPressed:
-                                                    () => Navigator.pop(
-                                                      context,
-                                                      true,
-                                                    ),
-                                                child: const Text(
-                                                  'Seleccionar',
-                                                ),
-                                              ),
-                                            ],
+                                      builder: (context) => AlertDialog(
+                                        title: const Text('Cerrar chat'),
+                                        content: const Text(
+                                          '¿Cuál fue tu punto de encuentro con el comprador? Selecciónalo y ayúdanos a mejorar.',
+                                        ),
+                                        actions: [
+                                          TextButton(
+                                            onPressed: () =>
+                                                Navigator.pop(context, false),
+                                            child: const Text('Cancelar'),
                                           ),
+                                          TextButton(
+                                            onPressed: () =>
+                                                Navigator.pop(context, true),
+                                            child: const Text('Seleccionar'),
+                                          ),
+                                        ],
+                                      ),
                                     );
 
                                     if (confirmar ?? false) {
                                       final puntoReal = await Navigator.push(
                                         context,
                                         MaterialPageRoute(
-                                          builder:
-                                              (_) => MapaSeleccionPage(
-                                                latitudSugerida:
-                                                    chat.latitudPuntoEncuentro,
-                                                longitudSugerida:
-                                                    chat.longitudPuntoEncuentro,
-                                              ),
+                                          builder: (_) => MapaSeleccionPage(
+                                            latitudSugerida:
+                                                chat.latitudPuntoEncuentro,
+                                            longitudSugerida:
+                                                chat.longitudPuntoEncuentro,
+                                          ),
                                         ),
                                       );
 
@@ -171,28 +194,26 @@ class _ChatPageState extends State<ChatPage> {
                                         await FirebaseFirestore.instance
                                             .collection('puntosDeEncuentro')
                                             .add({
-                                              'chatId': chat.id,
-                                              'puntoSugerido': {
-                                                'latitud':
-                                                    chat.latitudPuntoEncuentro,
-                                                'longitud':
-                                                    chat.longitudPuntoEncuentro,
-                                              },
-                                              'puntoReal': {
-                                                'latitud': puntoReal.latitude,
-                                                'longitud': puntoReal.longitude,
-                                              },
-                                              'timestamp': Timestamp.now(),
-                                            });
+                                          'chatId': chat.id,
+                                          'puntoSugerido': {
+                                            'latitud':
+                                                chat.latitudPuntoEncuentro,
+                                            'longitud':
+                                                chat.longitudPuntoEncuentro,
+                                          },
+                                          'puntoReal': {
+                                            'latitud': puntoReal.latitude,
+                                            'longitud': puntoReal.longitude,
+                                          },
+                                          'timestamp': Timestamp.now(),
+                                        });
 
                                         await controller.cerrarChat(chat.id);
 
-                                        //  Fuerza la recarga del FutureBuilder
                                         setState(() {});
 
-                                        ScaffoldMessenger.of(
-                                          context,
-                                        ).showSnackBar(
+                                        ScaffoldMessenger.of(context)
+                                            .showSnackBar(
                                           const SnackBar(
                                             content: Text(
                                               'Chat cerrado exitosamente.',

@@ -129,7 +129,7 @@ class _RatingFormPageState extends State<RatingFormPage> {
                   padding: const EdgeInsets.all(12),
                   color: Colors.redAccent,
                   child: const Text(
-                    "⚠️ Sin conexión. Tu calificación se enviará cuando se recupere la conexión.",
+                    "⚠️ Sin conexión. No puedes enviar la calificación.",
                     textAlign: TextAlign.center,
                     style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
                   ),
