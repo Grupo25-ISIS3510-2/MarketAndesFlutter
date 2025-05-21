@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../controllers/rating_controller.dart';
 import '../../models/rating_model.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 
 class RatingFormPage extends StatefulWidget {
   const RatingFormPage({super.key});
@@ -13,32 +14,68 @@ class _RatingFormPageState extends State<RatingFormPage> {
   int selectedRating = 0;
   final TextEditingController commentController = TextEditingController();
   final RatingController _ratingController = RatingController();
+  bool _isConnected = true;
+  bool _isSubmitting = false;
+  late final Connectivity _connectivity;
 
-  void _submitReview() async {
-    try {
-      final rating = Rating(
-        rating: selectedRating,
-        comment: commentController.text,
-        timestamp: DateTime.now(),
-      );
+  @override
+  void initState() {
+    super.initState();
 
-      await _ratingController.submitRating(rating);
+    _connectivity = Connectivity();
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Calificación enviada exitosamente')),
-      );
+    _checkInitialConnection();
 
+    _connectivity.onConnectivityChanged.listen((ConnectivityResult result) {
       setState(() {
-        selectedRating = 0;
-        commentController.clear();
+        _isConnected = result != ConnectivityResult.none;
       });
 
-      Navigator.pop(context);
-    } catch (e) {
+      if (_isConnected) {
+        _ratingController.retryPendingRatings();
+      }
+    });
+  }
+
+  void _checkInitialConnection() async {
+    final result = await _connectivity.checkConnectivity();
+    setState(() {
+      _isConnected = result != ConnectivityResult.none;
+    });
+  }
+
+  void _submitReview() async {
+    if (!_isConnected) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error al enviar la calificación: $e')),
+        const SnackBar(
+          content: Text('No hay conexión. Por favor, inténtalo cuando estés en línea.'),
+          backgroundColor: Colors.redAccent,
+        ),
       );
+      return;
     }
+
+    setState(() => _isSubmitting = true);
+
+    final rating = Rating(
+      rating: selectedRating,
+      comment: commentController.text,
+      timestamp: DateTime.now(),
+    );
+
+    await _ratingController.submitRating(rating);
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Calificación enviada exitosamente')),
+    );
+
+    setState(() {
+      selectedRating = 0;
+      commentController.clear();
+      _isSubmitting = false;
+    });
+
+    Navigator.pop(context);
   }
 
   @override
@@ -56,29 +93,50 @@ class _RatingFormPageState extends State<RatingFormPage> {
         ),
         centerTitle: true,
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(20.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const SizedBox(height: 20),
-            const Text(
-              "¿Cómo fue tu experiencia?",
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF00296B),
+      body: Stack(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(20.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const SizedBox(height: 20),
+                const Text(
+                  "¿Cómo fue tu experiencia?",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF00296B),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                _buildStarRating(),
+                const SizedBox(height: 30),
+                _buildCommentBox(),
+                const SizedBox(height: 40),
+                _buildSubmitButton(),
+              ],
+            ),
+          ),
+          if (!_isConnected)
+            Positioned(
+              bottom: 0,
+              left: 0,
+              right: 0,
+              child: SafeArea(
+                child: Container(
+                  padding: const EdgeInsets.all(12),
+                  color: Colors.redAccent,
+                  child: const Text(
+                    "⚠️ Sin conexión. Tu calificación se enviará cuando se recupere la conexión.",
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+                  ),
+                ),
               ),
             ),
-            const SizedBox(height: 20),
-            _buildStarRating(),
-            const SizedBox(height: 30),
-            _buildCommentBox(),
-            const SizedBox(height: 40),
-            _buildSubmitButton(),
-          ],
-        ),
+        ],
       ),
     );
   }
@@ -152,18 +210,18 @@ class _RatingFormPageState extends State<RatingFormPage> {
 
   Widget _buildSubmitButton() {
     return ElevatedButton(
+      onPressed: (_isSubmitting || !_isConnected) ? null : _submitReview,
       style: ElevatedButton.styleFrom(
-        backgroundColor: const Color(0xFFFDC500),
+        backgroundColor: _isConnected ? const Color(0xFFFDC500) : Colors.grey,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(15),
         ),
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
         elevation: 5,
       ),
-      onPressed: _submitReview,
-      child: const Text(
-        "Enviar Calificación",
-        style: TextStyle(
+      child: Text(
+        _isConnected ? "Enviar Calificación" : "Sin conexión",
+        style: const TextStyle(
           color: Colors.black,
           fontSize: 22,
           fontWeight: FontWeight.bold,

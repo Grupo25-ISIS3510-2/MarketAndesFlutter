@@ -70,7 +70,7 @@ class _HomePageState extends State<HomePage> {
                             ),
                             const SizedBox(height: 10),
                             FutureBuilder<List<Product>>(
-                              future: _controller.fetchAllProducts(),
+                              future: _controller.fetchAllProductsWithIsolate(),
                               builder: (context, allSnapshot) {
                                 if (allSnapshot.connectionState == ConnectionState.waiting) {
                                   return const CircularProgressIndicator();

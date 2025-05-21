@@ -27,7 +27,7 @@ class Product {
     final data = doc.data() as Map<String, dynamic>;
     return Product(
       name: data['name'],
-      price: data['price'],
+      price: (data['price'] as num).toInt(),
       imagePath: data['imageURL'],
       description: data['description'] ?? 'Sin descripción',
       sellerID: data['sellerID'] ?? 'Vendedor desconocido',
@@ -35,6 +35,20 @@ class Product {
       sellerRating: data['sellerRating'] ?? 0,
       category: data['category'] ?? 'General',
       isFavorite: false, // Cuando se crea un producto desde Firestore, no tenemos el estado de favorito, lo dejamos en false por defecto.
+    );
+  }
+
+    factory Product.fromMap(Map<String, dynamic> map) {
+    return Product(
+      name: map['name'] ?? 'Producto sin nombre',
+      price: (map['price'] as num?)?.toInt() ?? 0,
+      imagePath: map['imageURL'],
+      description: map['description'] ?? 'Sin descripción',
+      sellerID: map['sellerID'] ?? 'Vendedor desconocido',
+      uidSeller: map['uidSeller'] ?? 'Vendedor desconocido',
+      sellerRating: (map['sellerRating'] as num?)?.toInt() ?? 0,
+      category: map['category'] ?? 'General',
+      isFavorite: false, // Se sobrescribe luego si es necesario
     );
   }
 }
