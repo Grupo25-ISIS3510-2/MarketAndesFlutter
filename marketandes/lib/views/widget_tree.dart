@@ -37,19 +37,21 @@ class _HomeWithNavbarState extends State<HomeWithNavbar> {
   List<DocumentSnapshot> _docsPendientesComprador = [];
   List<DocumentSnapshot> _docsPendientesVendedor = [];
 
-  final List<Widget> _pages = [HomePage(), AddPage(), ChatPage()];
+  late final List<Widget> _pages;
 
   @override
   void initState() {
     super.initState();
+
     _selectedIndex = widget.selectedIndex;
+
+    _pages = const [HomePage(), AddPage(), ChatPage()];
+
     _revisarComprasPendientes();
     _revisarVentasPendientes();
     _connectivity = Connectivity();
     _connectivityStream = _connectivity.onConnectivityChanged;
-
     _checkInitialConnection();
-
     _listenToConnectivity();
   }
 
