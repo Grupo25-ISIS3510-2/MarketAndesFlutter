@@ -12,7 +12,9 @@ import 'package:marketandes/views/pages/favorites_page.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:marketandes/controllers/auth_controller.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:marketandes/views/pages/myproducts_page.dart';
 import 'dart:async';
+
 
 class HomeWithNavbar extends StatefulWidget {
   final int selectedIndex;
@@ -444,11 +446,24 @@ class _HomeWithNavbarState extends State<HomeWithNavbar> {
             ListTile(
               leading: const Icon(Icons.map, color: Colors.black),
               title: const Text("Mapa"),
-              onTap:
-                  () => Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => const MapPage()),
-                  ),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const MapPage()),
+                );
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.inventory, color: Colors.black),
+              title: const Text("Mis productos"),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const MyProductsPage()),
+                );
+              },
             ),
             ListTile(
               leading: const Icon(Icons.exit_to_app, color: Colors.red),
@@ -458,6 +473,7 @@ class _HomeWithNavbarState extends State<HomeWithNavbar> {
           ],
         ),
       ),
+
       body: Stack(
         children: [
           IndexedStack(index: _selectedIndex, children: _pages),
