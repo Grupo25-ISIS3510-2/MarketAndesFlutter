@@ -27,23 +27,25 @@ class _HomePageState extends State<HomePage> {
   }
 
 Future<void> _fetchCategories() async {
+  final recommendedProducts = await _controller.fetchRecommendedProducts();
+  final recommendedCategories = recommendedProducts.map((p) => p.category).toSet();
+
   final snapshot = await FirebaseFirestore.instance.collection('products').get();
   final categorySet = <String>{};
 
   for (var doc in snapshot.docs) {
-    final category = doc['category']; // <- corregido aquí
-    if (category != null) {
+    final category = doc['category'];
+    if (category != null && !recommendedCategories.contains(category)) {
       categorySet.add(category.toString());
     }
   }
-
-    print('✅ Categorías cargadas: ${categorySet.toList()}'); // <-- línea de depuración final
 
 
   setState(() {
     _categories = ['Todas', ...categorySet.toList()];
   });
 }
+
 
 
   @override
@@ -127,9 +129,30 @@ Future<void> _fetchCategories() async {
     );
   }
 
-  Widget _buildCategoryDropdown() {
-    return DropdownButton<String>(
+Widget _buildCategoryDropdown() {
+  return Container(
+    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(12),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black12,
+          blurRadius: 6,
+          offset: Offset(0, 3),
+        ),
+      ],
+    ),
+    child: DropdownButtonFormField<String>(
       value: _selectedCategory,
+      icon: const Icon(Icons.keyboard_arrow_down, color: Colors.black),
+      decoration: const InputDecoration.collapsed(hintText: ''),
+      dropdownColor: Colors.white,
+      style: const TextStyle(
+        color: Colors.black,
+        fontFamily: 'Poppins',
+        fontSize: 16,
+      ),
       onChanged: (value) {
         if (value != null) {
           setState(() {
@@ -140,11 +163,20 @@ Future<void> _fetchCategories() async {
       items: _categories.map((category) {
         return DropdownMenuItem<String>(
           value: category,
-          child: Text(category),
+          child: Text(
+            category,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontFamily: 'Poppins'),
+          ),
         );
       }).toList(),
-    );
-  }
+    ),
+  );
+}
+
+
+
+
 
   Widget _buildProductGrid(List<Product> products) {
     return GridView.builder(
