@@ -14,11 +14,47 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   final ProductController _controller = ProductController();
 
+  List<Product> _allProducts = [];
+  List<Product> _filteredProducts = [];
+  List<String> _categories = ['Todas'];
+  String _selectedCategory = 'Todas';
+
   @override
   void initState() {
     super.initState();
     _controller.fetchUserPreferences().then((_) {
       setState(() {});
+    });
+
+    _loadAllProducts();
+  }
+
+  Future<void> _loadAllProducts() async {
+    final all = await _controller.fetchAllProductsWithIsolate();
+    final uniqueCategories = <String>{'Todas'};
+    for (var product in all) {
+      if (product.category.isNotEmpty) {
+        uniqueCategories.add(product.category);
+      }
+    }
+
+    setState(() {
+      _allProducts = all;
+      _categories = uniqueCategories.toList();
+      _filteredProducts = _filterProductsByCategory(_selectedCategory);
+    });
+  }
+
+  List<Product> _filterProductsByCategory(String category) {
+    if (category == 'Todas') return _allProducts;
+    return _allProducts.where((product) => product.category == category).toList();
+  }
+
+  void _onCategoryChanged(String? value) {
+    if (value == null) return;
+    setState(() {
+      _selectedCategory = value;
+      _filteredProducts = _filterProductsByCategory(_selectedCategory);
     });
   }
 
@@ -45,53 +81,54 @@ class _HomePageState extends State<HomePage> {
               ),
               const SizedBox(height: 10),
               FutureBuilder<List<Product>>(
-                    future: _controller.fetchRecommendedProducts(),
-                    builder: (context, snapshot) {
-                      if (snapshot.connectionState == ConnectionState.waiting) {
-                        return const CircularProgressIndicator();
-                      } else if (snapshot.hasError) {
-                        return Text('Error: ${snapshot.error}');
-                      } else {
-                        final recommendedProducts = snapshot.data ?? [];
-                        return Column(
-                          children: [
-                            _buildProductGrid(recommendedProducts),
-                            const SizedBox(height: 20),
-                            const Center(
-                              child: Text(
-                                "Explorar Todos los Productos",
-                                style: TextStyle(
-                                  fontSize: 22,
-                                  fontWeight: FontWeight.bold,
-                                  fontFamily: 'Poppins',
-                                  color: Colors.black,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 10),
-                            FutureBuilder<List<Product>>(
-                              future: _controller.fetchAllProductsWithIsolate(),
-                              builder: (context, allSnapshot) {
-                                if (allSnapshot.connectionState == ConnectionState.waiting) {
-                                  return const CircularProgressIndicator();
-                                } else if (allSnapshot.hasError) {
-                                  return Text('Error: ${allSnapshot.error}');
-                                } else {
-                                  final allProducts = allSnapshot.data ?? [];
-                                  final filteredProducts = allProducts.where((product) =>
-                                    !recommendedProducts.any((recommended) => recommended.name == product.name)
-                                  ).toList();
+                future: _controller.fetchRecommendedProducts(),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const CircularProgressIndicator();
+                  } else if (snapshot.hasError) {
+                    return Text('Error: ${snapshot.error}');
+                  } else {
+                    final recommendedProducts = snapshot.data ?? [];
+                    final explorarProducts = _filteredProducts.where((product) =>
+                      !recommendedProducts.any((recommended) => recommended.name == product.name)).toList();
 
-                                  return _buildProductGrid(filteredProducts);
-                                }
-                              },
+                    return Column(
+                      children: [
+                        _buildProductGrid(recommendedProducts),
+                        const SizedBox(height: 20),
+                        const Center(
+                          child: Text(
+                            "Explorar Todos los Productos",
+                            style: TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                              fontFamily: 'Poppins',
+                              color: Colors.black,
                             ),
-                          ],
-                        );
-                      }
-                    },
-                  ),
+                          ),
+                        ),
+                        const SizedBox(height: 10),
 
+                        // Dropdown para seleccionar categoría
+                        DropdownButton<String>(
+                          value: _selectedCategory,
+                          icon: const Icon(Icons.arrow_drop_down),
+                          items: _categories.map<DropdownMenuItem<String>>((String value) {
+                            return DropdownMenuItem<String>(
+                              value: value,
+                              child: Text(value),
+                            );
+                          }).toList(),
+                          onChanged: _onCategoryChanged,
+                        ),
+                        const SizedBox(height: 10),
+
+                        _buildProductGrid(explorarProducts),
+                      ],
+                    );
+                  }
+                },
+              ),
             ],
           ),
         ),
@@ -116,104 +153,102 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-Widget _buildProductCard(Product product) {
-  bool isFavorite = _controller.userFavorites.contains(product.name);
+  Widget _buildProductCard(Product product) {
+    bool isFavorite = _controller.userFavorites.contains(product.name);
 
-  return GestureDetector(
-    onTap: () {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => ProductDetailPage(product: product),
-        ),
-      );
-    },
-    child: Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: const [
-          BoxShadow(
-            color: Colors.black12,
-            blurRadius: 4,
-            offset: Offset(2, 2),
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => ProductDetailPage(product: product),
           ),
-        ],
-      ),
-      child: Stack(
-        alignment: Alignment.topRight,
-        children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: product.imagePath != null && product.imagePath!.isNotEmpty
-                      ? CachedNetworkImage(
-                          imageUrl: product.imagePath!,
-                          fit: BoxFit.contain,
-                          placeholder: (context, url) =>
-                              const CircularProgressIndicator(),
-                          errorWidget: (context, url, error) =>
-                              const Icon(Icons.image_not_supported, size: 100, color: Colors.grey),
-                        )
-                      : const Icon(Icons.image_not_supported, size: 100, color: Colors.grey),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                child: Text(
-                  product.name,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                    color: Colors.black,
-                    fontFamily: 'Poppins',
+        );
+      },
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: const [
+            BoxShadow(
+              color: Colors.black12,
+              blurRadius: 4,
+              offset: Offset(2, 2),
+            ),
+          ],
+        ),
+        child: Stack(
+          alignment: Alignment.topRight,
+          children: [
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: product.imagePath != null && product.imagePath!.isNotEmpty
+                        ? CachedNetworkImage(
+                            imageUrl: product.imagePath!,
+                            fit: BoxFit.contain,
+                            placeholder: (context, url) => const CircularProgressIndicator(),
+                            errorWidget: (context, url, error) => const Icon(Icons.image_not_supported, size: 100, color: Colors.grey),
+                          )
+                        : const Icon(Icons.image_not_supported, size: 100, color: Colors.grey),
                   ),
                 ),
-              ),
-              const SizedBox(height: 8),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 10),
-                decoration: const BoxDecoration(
-                  color: Color(0xFF00296B),
-                  borderRadius: BorderRadius.only(
-                    bottomLeft: Radius.circular(12),
-                    bottomRight: Radius.circular(12),
-                  ),
-                ),
-                child: Center(
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8.0),
                   child: Text(
-                    "\$ ${product.price}",
+                    product.name,
+                    textAlign: TextAlign.center,
                     style: const TextStyle(
-                      color: Colors.white,
                       fontWeight: FontWeight.bold,
                       fontSize: 16,
+                      color: Colors.black,
                       fontFamily: 'Poppins',
                     ),
                   ),
                 ),
-              ),
-            ],
-          ),
-          IconButton(
-            icon: Icon(
-              isFavorite ? Icons.favorite : Icons.favorite_border,
-              color: isFavorite ? Colors.red : Colors.grey,
-              size: 30,
+                const SizedBox(height: 8),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  decoration: const BoxDecoration(
+                    color: Color(0xFF00296B),
+                    borderRadius: BorderRadius.only(
+                      bottomLeft: Radius.circular(12),
+                      bottomRight: Radius.circular(12),
+                    ),
+                  ),
+                  child: Center(
+                    child: Text(
+                      "\$ ${product.price}",
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                        fontFamily: 'Poppins',
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
-            onPressed: () {
-              setState(() {
-                _controller.toggleFavorite(product.name);
-              });
-            },
-          ),
-        ],
+            IconButton(
+              icon: Icon(
+                isFavorite ? Icons.favorite : Icons.favorite_border,
+                color: isFavorite ? Colors.red : Colors.grey,
+                size: 30,
+              ),
+              onPressed: () {
+                setState(() {
+                  _controller.toggleFavorite(product.name);
+                });
+              },
+            ),
+          ],
+        ),
       ),
-    ),
-  );
-}
+    );
+  }
 }
