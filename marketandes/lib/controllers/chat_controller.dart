@@ -49,13 +49,19 @@ class ChatController {
   Future<List<ChatModel>> getChats(String userId) async {
     print('[getChats] Iniciando para user: $userId');
 
-    final localUpdate = await _localDb.getLastUpdate(userId);
-    final localData = await _localDb.getChats(userId);
+    final userRef = _firestore.collection('users').doc(userId);
 
-    final userDoc = await _firestore.collection('users').doc(userId).get();
-    final remoteUpdate = userDoc['lastUpdate'];
-    final remoteUpdateStr =
-        (remoteUpdate as Timestamp).toDate().toIso8601String();
+    // Paralelizamos local y remoto
+    final localUpdateFuture = _localDb.getLastUpdate(userId);
+    final localDataFuture = _localDb.getChats(userId);
+    final userDocFuture = userRef.get();
+
+    final localUpdate = await localUpdateFuture;
+    final localData = await localDataFuture;
+    final userDoc = await userDocFuture;
+
+    final remoteUpdate = userDoc['lastUpdate'] as Timestamp;
+    final remoteUpdateStr = remoteUpdate.toDate().toIso8601String();
 
     print('[getChats] LocalUpdate: $localUpdate');
     print('[getChats] RemoteUpdate: $remoteUpdateStr');
@@ -71,41 +77,46 @@ class ChatController {
       }).toList();
     }
 
-    final snapshot = await _firestore.collection('chatsFlutter').get();
-    final filteredDocs =
-        snapshot.docs.where((doc) {
-          final data = doc.data();
-          final uuidOwner = data['uuidOwner'] as DocumentReference;
-          final uuidUser = data['uuidUser'] as DocumentReference;
-          return uuidOwner.id == userId || uuidUser.id == userId;
-        }).toList();
+    // Filtramos desde Firestore para evitar traer todo
+    final snapshot1 =
+        await _firestore
+            .collection('chatsFlutter')
+            .where('uuidUser', isEqualTo: userRef)
+            .get();
+    final snapshot2 =
+        await _firestore
+            .collection('chatsFlutter')
+            .where('uuidOwner', isEqualTo: userRef)
+            .get();
+    final allDocs = {...snapshot1.docs, ...snapshot2.docs}.toList();
 
-    print('[getChats] Firebase filtrado: ${filteredDocs.length} documentos');
+    print('[getChats] Firebase filtrado: ${allDocs.length} documentos');
 
     final chatModelsRaw = await Future.wait(
-      filteredDocs.map((chat) async {
+      allDocs.map((chat) async {
         try {
-          final uuidOwnerRef = chat['uuidOwner'] as DocumentReference;
-          final uuidUserRef = chat['uuidUser'] as DocumentReference;
+          final data = chat.data();
+          final uuidOwnerRef = data['uuidOwner'] as DocumentReference;
+          final uuidUserRef = data['uuidUser'] as DocumentReference;
           final otherUserRef =
               uuidOwnerRef.id == userId ? uuidUserRef : uuidOwnerRef;
 
           print('🔍 Consultando usuario: ${otherUserRef.path}');
-          final userData = await otherUserRef.get();
+          final userDataDoc = await otherUserRef.get();
 
-          if (!userData.exists || userData.data() == null) {
+          if (!userDataDoc.exists || userDataDoc.data() == null) {
             print('⚠️ Usuario no encontrado: ${otherUserRef.path}');
             return null;
           }
 
           return ChatModel(
             chatData: {
-              ...(chat.data() as Map<String, dynamic>),
+              ...data,
               'id': chat.id,
-              'uuidUser': chat['uuidUser'],
-              'uuidOwner': chat['uuidOwner'],
+              'uuidUserId': uuidUserRef.id,
+              'uuidOwnerId': uuidOwnerRef.id,
             },
-            userData: userData.data() as Map<String, dynamic>,
+            userData: userDataDoc.data() as Map<String, dynamic>,
             currentUserId: userId,
           );
         } catch (e) {
@@ -124,7 +135,6 @@ class ChatController {
 
           cleanedChat.updateAll((key, value) {
             if (value is Timestamp) return value.toDate().toIso8601String();
-            if (value is DocumentReference) return {'id': value.id};
             return value;
           });
 
