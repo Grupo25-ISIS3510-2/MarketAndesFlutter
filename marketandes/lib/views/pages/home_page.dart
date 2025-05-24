@@ -3,6 +3,7 @@ import 'package:marketandes/models/product_model.dart';
 import 'package:marketandes/controllers/product_controller.dart';
 import 'package:marketandes/views/pages/product_detail_page.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -13,11 +14,8 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   final ProductController _controller = ProductController();
-
-  List<Product> _allProducts = [];
-  List<Product> _filteredProducts = [];
-  List<String> _categories = ['Todas'];
   String _selectedCategory = 'Todas';
+  List<String> _categories = ['Todas'];
 
   @override
   void initState() {
@@ -25,36 +23,22 @@ class _HomePageState extends State<HomePage> {
     _controller.fetchUserPreferences().then((_) {
       setState(() {});
     });
-
-    _loadAllProducts();
+    _fetchCategories();
   }
 
-  Future<void> _loadAllProducts() async {
-    final all = await _controller.fetchAllProductsWithIsolate();
-    final uniqueCategories = <String>{'Todas'};
-    for (var product in all) {
-      if (product.category.isNotEmpty) {
-        uniqueCategories.add(product.category);
+  Future<void> _fetchCategories() async {
+    final snapshot = await FirebaseFirestore.instance.collection('products').get();
+    final categorySet = <String>{};
+
+    for (var doc in snapshot.docs) {
+      final category = doc['categoory'];
+      if (category != null) {
+        categorySet.add(category.toString());
       }
     }
 
     setState(() {
-      _allProducts = all;
-      _categories = uniqueCategories.toList();
-      _filteredProducts = _filterProductsByCategory(_selectedCategory);
-    });
-  }
-
-  List<Product> _filterProductsByCategory(String category) {
-    if (category == 'Todas') return _allProducts;
-    return _allProducts.where((product) => product.category == category).toList();
-  }
-
-  void _onCategoryChanged(String? value) {
-    if (value == null) return;
-    setState(() {
-      _selectedCategory = value;
-      _filteredProducts = _filterProductsByCategory(_selectedCategory);
+      _categories = ['Todas', ...categorySet.toList()];
     });
   }
 
@@ -89,9 +73,6 @@ class _HomePageState extends State<HomePage> {
                     return Text('Error: ${snapshot.error}');
                   } else {
                     final recommendedProducts = snapshot.data ?? [];
-                    final explorarProducts = _filteredProducts.where((product) =>
-                      !recommendedProducts.any((recommended) => recommended.name == product.name)).toList();
-
                     return Column(
                       children: [
                         _buildProductGrid(recommendedProducts),
@@ -108,22 +89,28 @@ class _HomePageState extends State<HomePage> {
                           ),
                         ),
                         const SizedBox(height: 10),
-
-                        // Dropdown para seleccionar categoría
-                        DropdownButton<String>(
-                          value: _selectedCategory,
-                          icon: const Icon(Icons.arrow_drop_down),
-                          items: _categories.map<DropdownMenuItem<String>>((String value) {
-                            return DropdownMenuItem<String>(
-                              value: value,
-                              child: Text(value),
-                            );
-                          }).toList(),
-                          onChanged: _onCategoryChanged,
-                        ),
+                        _buildCategoryDropdown(),
                         const SizedBox(height: 10),
+                        FutureBuilder<List<Product>>(
+                          future: _controller.fetchAllProductsWithIsolate(),
+                          builder: (context, allSnapshot) {
+                            if (allSnapshot.connectionState == ConnectionState.waiting) {
+                              return const CircularProgressIndicator();
+                            } else if (allSnapshot.hasError) {
+                              return Text('Error: ${allSnapshot.error}');
+                            } else {
+                              final allProducts = allSnapshot.data ?? [];
+                              final filteredProducts = allProducts
+                                  .where((product) => !recommendedProducts.any(
+                                      (recommended) => recommended.name == product.name))
+                                  .where((product) => _selectedCategory == 'Todas' ||
+                                      product.category == _selectedCategory)
+                                  .toList();
 
-                        _buildProductGrid(explorarProducts),
+                              return _buildProductGrid(filteredProducts);
+                            }
+                          },
+                        ),
                       ],
                     );
                   }
@@ -133,6 +120,25 @@ class _HomePageState extends State<HomePage> {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildCategoryDropdown() {
+    return DropdownButton<String>(
+      value: _selectedCategory,
+      onChanged: (value) {
+        if (value != null) {
+          setState(() {
+            _selectedCategory = value;
+          });
+        }
+      },
+      items: _categories.map((category) {
+        return DropdownMenuItem<String>(
+          value: category,
+          child: Text(category),
+        );
+      }).toList(),
     );
   }
 
