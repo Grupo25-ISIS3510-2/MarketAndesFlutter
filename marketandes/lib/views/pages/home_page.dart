@@ -26,21 +26,25 @@ class _HomePageState extends State<HomePage> {
     _fetchCategories();
   }
 
-  Future<void> _fetchCategories() async {
-    final snapshot = await FirebaseFirestore.instance.collection('products').get();
-    final categorySet = <String>{};
+Future<void> _fetchCategories() async {
+  final snapshot = await FirebaseFirestore.instance.collection('products').get();
+  final categorySet = <String>{};
 
-    for (var doc in snapshot.docs) {
-      final category = doc['categoory'];
-      if (category != null) {
-        categorySet.add(category.toString());
-      }
+  for (var doc in snapshot.docs) {
+    final category = doc['category']; // <- corregido aquí
+    if (category != null) {
+      categorySet.add(category.toString());
     }
-
-    setState(() {
-      _categories = ['Todas', ...categorySet.toList()];
-    });
   }
+
+    print('✅ Categorías cargadas: ${categorySet.toList()}'); // <-- línea de depuración final
+
+
+  setState(() {
+    _categories = ['Todas', ...categorySet.toList()];
+  });
+}
+
 
   @override
   Widget build(BuildContext context) {
@@ -101,12 +105,11 @@ class _HomePageState extends State<HomePage> {
                             } else {
                               final allProducts = allSnapshot.data ?? [];
                               final filteredProducts = allProducts
-    .where((product) => !recommendedProducts.any(
-        (recommended) => recommended.name == product.name))
-    .where((product) => _selectedCategory == 'Todas' || product.category == _selectedCategory)
-    .toList();
-
-
+                                  .where((product) =>
+                                      !recommendedProducts.any((recommended) => recommended.name == product.name))
+                                  .where((product) =>
+                                      _selectedCategory == 'Todas' || product.category == _selectedCategory)
+                                  .toList();
 
                               return _buildProductGrid(filteredProducts);
                             }
@@ -198,7 +201,8 @@ class _HomePageState extends State<HomePage> {
                             imageUrl: product.imagePath!,
                             fit: BoxFit.contain,
                             placeholder: (context, url) => const CircularProgressIndicator(),
-                            errorWidget: (context, url, error) => const Icon(Icons.image_not_supported, size: 100, color: Colors.grey),
+                            errorWidget: (context, url, error) =>
+                                const Icon(Icons.image_not_supported, size: 100, color: Colors.grey),
                           )
                         : const Icon(Icons.image_not_supported, size: 100, color: Colors.grey),
                   ),
