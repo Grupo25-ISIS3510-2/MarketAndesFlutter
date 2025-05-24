@@ -32,12 +32,11 @@ class NavbarWidget extends StatelessWidget {
           selectedIcon: Image.asset("assets/images/chatIconSelected.png"),
           label: "",
         ),
-        // Si quieres agregar más pestañas, agrégalas aquí:
-        // NavigationDestination(
-        //   icon: Image.asset("assets/images/tradeIcon.png"),
-        //   selectedIcon: Image.asset("assets/images/tradeIconSelected.png"),
-        //   label: "",
-        // ),
+        NavigationDestination(
+          icon: Image.asset("assets/images/tradeIcon.png"),
+          selectedIcon: Image.asset("assets/images/tradeIconSelected.png"),
+          label: "",
+        ),
       ],
     );
   }
