@@ -42,6 +42,20 @@ class _ChatPageState extends State<ChatPage> {
     });
   }
 
+  Future<void> registrarFeatureTime({
+    required String featureName,
+    required int milliseconds,
+  }) async {
+    final result = await Connectivity().checkConnectivity();
+    if (result == ConnectivityResult.none) return;
+
+    await FirebaseFirestore.instance.collection('featuresTime').add({
+      'feature': featureName,
+      'timeMs': milliseconds,
+      'timestamp': Timestamp.now(),
+    });
+  }
+
   @override
   void dispose() {
     _connectivitySubscription.cancel();
@@ -77,7 +91,18 @@ class _ChatPageState extends State<ChatPage> {
               Container(height: 2, color: const Color(0xFFFDC500)),
               Expanded(
                 child: FutureBuilder<List<ChatModel>>(
-                  future: controller.getChats(userId),
+                  future:
+                      (() async {
+                        final inicio = DateTime.now();
+                        final result = await controller.getChats(userId);
+                        final fin = DateTime.now();
+                        final duracion = fin.difference(inicio).inMilliseconds;
+                        await registrarFeatureTime(
+                          featureName: 'chat',
+                          milliseconds: duracion,
+                        );
+                        return result;
+                      })(),
                   builder: (context, snapshot) {
                     if (snapshot.connectionState == ConnectionState.waiting) {
                       return const Center(child: CircularProgressIndicator());
