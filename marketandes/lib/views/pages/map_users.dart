@@ -4,7 +4,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:connectivity_plus/connectivity_plus.dart';  // <-- Importar
+import 'package:connectivity_plus/connectivity_plus.dart'; // <-- Importar
 import '../../controllers/map_encounter_controller.dart';
 import '../../models/map_encounter_model.dart';
 import '../../controllers/session_state_controller.dart';
@@ -57,8 +57,9 @@ class _MapaEncuentroPageState extends State<MapaEncuentroPage> {
       tieneConexion = connectivityResult != ConnectivityResult.none;
     });
 
-    _connectivitySubscription =
-        Connectivity().onConnectivityChanged.listen((result) {
+    _connectivitySubscription = Connectivity().onConnectivityChanged.listen((
+      result,
+    ) {
       setState(() {
         tieneConexion = result != ConnectivityResult.none;
       });
@@ -101,9 +102,9 @@ class _MapaEncuentroPageState extends State<MapaEncuentroPage> {
     puntoEncuentro =
         (lat == 4.601635 && lng == -74.065415)
             ? MapaEncuentroModel.calcularPuntoMedio(
-                miUbicacion,
-                ubicacionOtraPersona,
-              )
+              miUbicacion,
+              ubicacionOtraPersona,
+            )
             : LatLng(lat, lng);
 
     if (lat == -74.065415 && lng == -74.065415) {
@@ -118,21 +119,22 @@ class _MapaEncuentroPageState extends State<MapaEncuentroPage> {
   Future<void> _mostrarDialogoPermisos() async {
     await showDialog(
       context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Permiso requerido'),
-        content: const Text(
-          'Debes permitir el acceso a la ubicación para continuar.',
-        ),
-        actions: [
-          TextButton(
-            child: const Text('Abrir configuración'),
-            onPressed: () {
-              openAppSettings();
-              Navigator.pop(context);
-            },
+      builder:
+          (_) => AlertDialog(
+            title: const Text('Permiso requerido'),
+            content: const Text(
+              'Debes permitir el acceso a la ubicación para continuar.',
+            ),
+            actions: [
+              TextButton(
+                child: const Text('Abrir configuración'),
+                onPressed: () {
+                  openAppSettings();
+                  Navigator.pop(context);
+                },
+              ),
+            ],
           ),
-        ],
-      ),
     );
   }
 
@@ -142,8 +144,9 @@ class _MapaEncuentroPageState extends State<MapaEncuentroPage> {
       distanceFilter: 200,
     );
 
-    _stream = Geolocator.getPositionStream(locationSettings: settings)
-        .listen((position) async {
+    _stream = Geolocator.getPositionStream(locationSettings: settings).listen((
+      position,
+    ) async {
       miUbicacion = LatLng(position.latitude, position.longitude);
       ruta = await _controller.obtenerRuta(miUbicacion, puntoEncuentro);
       setState(() {});
@@ -168,59 +171,56 @@ class _MapaEncuentroPageState extends State<MapaEncuentroPage> {
     }
 
     // Si no hay conexión, mostrar imagen y texto
-if (!tieneConexion) {
-  return Scaffold(
-    backgroundColor: Colors.white, // <-- Fondo blanco
-    appBar: AppBar(
-      backgroundColor: const Color(0xFF00296B),
-      title: Row(
-        children: [
-          const Icon(Icons.shopping_cart_outlined, color: Colors.white),
-          const SizedBox(width: 8),
-          Text(
-            'Encuentro con ${widget.nombreUsuario}',
-            style: const TextStyle(color: Colors.white),
+    if (!tieneConexion) {
+      return Scaffold(
+        backgroundColor: Colors.white, // <-- Fondo blanco
+        appBar: AppBar(
+          backgroundColor: const Color(0xFF00296B),
+          title: Row(
+            children: [
+              const Icon(Icons.shopping_cart_outlined, color: Colors.white),
+              const SizedBox(width: 8),
+              Text(
+                'Encuentro con ${widget.nombreUsuario}',
+                style: const TextStyle(color: Colors.white),
+              ),
+            ],
           ),
-        ],
-      ),
-    ),
-    body: Container(
-      color: Colors.white, // <-- Asegura fondo blanco en todo
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Text(
-            'No hay conexión a internet.',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Colors.black87,
-            ),
+        ),
+        body: Container(
+          color: Colors.white, // <-- Asegura fondo blanco en todo
+          width: double.infinity,
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Text(
+                'No hay conexión a internet.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                ),
+              ),
+              const SizedBox(height: 10),
+              const Text(
+                'No es posible cargar el mapa.',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 16, color: Colors.black54),
+              ),
+              const SizedBox(height: 30),
+              Image.asset(
+                'assets/images/NoInternet.jpg',
+                width: 200,
+                height: 200,
+                fit: BoxFit.contain,
+              ),
+            ],
           ),
-          const SizedBox(height: 10),
-          const Text(
-            'No es posible cargar el mapa.',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 16,
-              color: Colors.black54,
-            ),
-          ),
-          const SizedBox(height: 30),
-          Image.asset(
-            'assets/images/NoInternet.jpg',
-            width: 200,
-            height: 200,
-            fit: BoxFit.contain,
-          ),
-        ],
-      ),
-    ),
-  );
-}
+        ),
+      );
+    }
 
     // Si hay conexión, mostrar mapa normal
     return Scaffold(
@@ -315,18 +315,19 @@ if (!tieneConexion) {
       width: 80,
       height: 80,
       point: point,
-      builder: (_) => Column(
-        children: [
-          Icon(Icons.location_pin, size: 40, color: color),
-          Container(
-            color: Colors.white,
-            child: Text(
-              label,
-              style: const TextStyle(fontSize: 12, color: Colors.black),
-            ),
+      builder:
+          (_) => Column(
+            children: [
+              Icon(Icons.location_pin, size: 40, color: color),
+              Container(
+                color: Colors.white,
+                child: Text(
+                  label,
+                  style: const TextStyle(fontSize: 12, color: Colors.black),
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
     );
   }
 }
