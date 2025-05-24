@@ -9,13 +9,13 @@ class ProductController {
   List<String> userPreferences = [];
   List<String> userFavorites = [];
 
-  // Future simple con async/await
+  /// Obtiene las preferencias y favoritos del usuario actual desde Firestore.
   Future<void> fetchUserPreferences() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user != null) {
-      final doc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
-      if (doc.exists) {
-        final data = doc.data();
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser != null) {
+      final docSnapshot = await FirebaseFirestore.instance.collection('users').doc(currentUser.uid).get();
+      if (docSnapshot.exists) {
+        final data = docSnapshot.data();
         if (data != null) {
           if (data['preferencias'] is List) {
             userPreferences = List<String>.from(data['preferencias']);
@@ -28,13 +28,11 @@ class ProductController {
     }
   }
 
-
-
-
+  /// Cambia el estado favorito de un producto y actualiza Firestore.
   Future<void> toggleFavorite(String productName) async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user != null) {
-      final docRef = FirebaseFirestore.instance.collection('users').doc(user.uid);
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser != null) {
+      final userDocRef = FirebaseFirestore.instance.collection('users').doc(currentUser.uid);
 
       if (userFavorites.contains(productName)) {
         userFavorites.remove(productName);
@@ -42,14 +40,13 @@ class ProductController {
         userFavorites.add(productName);
       }
 
-      await docRef.update({
+      await userDocRef.update({
         'favoritos': userFavorites,
       });
     }
   }
 
-
-  // Isolate para procesar productos en segundo plano
+  /// Obtiene todos los productos procesándolos en un isolate para no bloquear UI.
   Future<List<Product>> fetchAllProductsWithIsolate() async {
     final snapshot = await FirebaseFirestore.instance.collection('products').get();
     final rawProducts = snapshot.docs.map((doc) => doc.data()).toList();
@@ -57,16 +54,16 @@ class ProductController {
     final receivePort = ReceivePort();
     await Isolate.spawn(_isolateProcessor, [receivePort.sendPort, rawProducts, userFavorites]);
 
-    final result = await receivePort.first as List<Product>;
-    return result;
+    final List<Product> processedProducts = await receivePort.first as List<Product>;
+    return processedProducts;
   }
 
   static void _isolateProcessor(List<dynamic> args) {
-    SendPort sendPort = args[0];
-    List<Map<String, dynamic>> rawProducts = List<Map<String, dynamic>>.from(args[1]);
-    List<String> favorites = List<String>.from(args[2]);
+    final SendPort sendPort = args[0];
+    final List<Map<String, dynamic>> rawProducts = List<Map<String, dynamic>>.from(args[1]);
+    final List<String> favorites = List<String>.from(args[2]);
 
-    List<Product> processed = rawProducts.map((data) {
+    final List<Product> processed = rawProducts.map((data) {
       final product = Product.fromMap(data);
       product.isFavorite = favorites.contains(product.name);
       return product;
@@ -75,12 +72,12 @@ class ProductController {
     sendPort.send(processed);
   }
 
-  // Future simple con async/await
+  /// Retorna una lista filtrada de productos recomendados según preferencias del usuario.
   Future<List<Product>> fetchRecommendedProducts() async {
     final snapshot = await FirebaseFirestore.instance.collection('products').get();
-    List<Product> allProducts = snapshot.docs.map((doc) => Product.fromFirestore(doc)).toList();
+    final allProducts = snapshot.docs.map((doc) => Product.fromFirestore(doc)).toList();
 
-    return allProducts
+    final recommended = allProducts
         .where((product) => userPreferences.contains(product.category))
         .take(4)
         .map((product) {
@@ -88,7 +85,7 @@ class ProductController {
           return product;
         })
         .toList();
+
+    return recommended;
   }
-
-
 }
