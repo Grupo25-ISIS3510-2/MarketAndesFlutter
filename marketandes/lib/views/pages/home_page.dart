@@ -101,11 +101,12 @@ class _HomePageState extends State<HomePage> {
                             } else {
                               final allProducts = allSnapshot.data ?? [];
                               final filteredProducts = allProducts
-                                  .where((product) => !recommendedProducts.any(
-                                      (recommended) => recommended.name == product.name))
-                                  .where((product) => _selectedCategory == 'Todas' ||
-                                      product.category == _selectedCategory)
-                                  .toList();
+    .where((product) => !recommendedProducts.any(
+        (recommended) => recommended.name == product.name))
+    .where((product) => _selectedCategory == 'Todas' || product.category == _selectedCategory)
+    .toList();
+
+
 
                               return _buildProductGrid(filteredProducts);
                             }
