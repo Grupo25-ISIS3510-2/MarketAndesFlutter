@@ -14,6 +14,7 @@ import 'package:marketandes/controllers/auth_controller.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:marketandes/views/pages/myproducts_page.dart';
 import 'dart:async';
+import 'package:marketandes/views/pages/profile_page.dart';
 
 class HomeWithNavbar extends StatefulWidget {
   final int selectedIndex;
@@ -473,7 +474,14 @@ class _HomeWithNavbarState extends State<HomeWithNavbar> {
               title: const Text("Mi perfil"),
               onTap: () {
                 Navigator.pop(context);
-                // Aquí luego se agregará la navegación a la página de perfil
+                Future.delayed(const Duration(milliseconds: 200), () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => ProfilePage(),
+                    ), // <- SIN CONST
+                  );
+                });
               },
             ),
             ListTile(
