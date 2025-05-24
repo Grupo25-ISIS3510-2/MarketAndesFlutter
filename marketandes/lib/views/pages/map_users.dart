@@ -9,6 +9,8 @@ import '../../controllers/map_encounter_controller.dart';
 import '../../models/map_encounter_model.dart';
 import '../../controllers/session_state_controller.dart';
 import 'package:flutter/foundation.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class MapaEncuentroPage extends StatefulWidget {
   final String nombreUsuario;
@@ -67,11 +69,27 @@ class _MapaEncuentroPageState extends State<MapaEncuentroPage> {
     });
   }
 
+  Future<void> registrarFeatureTime({
+    required String featureName,
+    required int milliseconds,
+  }) async {
+    final result = await Connectivity().checkConnectivity();
+    if (result == ConnectivityResult.none) return;
+
+    await FirebaseFirestore.instance.collection('featuresTime').add({
+      'feature': featureName,
+      'timeMs': milliseconds,
+      'timestamp': Timestamp.now(),
+    });
+  }
+
   Future<void> _inicializar() async {
     if (!tieneConexion) {
       setState(() => cargando = false);
       return;
     }
+
+    final inicio = DateTime.now(); // <-- Aquí medimos tiempo
 
     final permiso = await _controller.verificarPermisosUbicacion();
     if (!permiso) {
@@ -115,6 +133,11 @@ class _MapaEncuentroPageState extends State<MapaEncuentroPage> {
     ruta = await _controller.obtenerRuta(miUbicacion, puntoEncuentro);
     setState(() => cargando = false);
     _escucharUbicacion();
+
+    // Guardamos tiempo al final
+    final fin = DateTime.now();
+    final duracion = fin.difference(inicio).inMilliseconds;
+    registrarFeatureTime(featureName: 'map', milliseconds: duracion);
   }
 
   Future<void> _mostrarDialogoPermisos() async {

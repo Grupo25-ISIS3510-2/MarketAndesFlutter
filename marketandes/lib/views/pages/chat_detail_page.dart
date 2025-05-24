@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../../controllers/chat_message_controller.dart';
 import '../../models/chat_message_model.dart';
 import '../../controllers/session_state_controller.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class ChatConversationPage extends StatefulWidget {
   final String chatId;
@@ -45,6 +47,20 @@ class _ChatConversationPageState extends State<ChatConversationPage> {
   void _toggleProximityMode(bool value) {
     setState(() {
       _controller.toggleProximityMode(value);
+    });
+  }
+
+  Future<void> registrarFeatureTime({
+    required String featureName,
+    required int milliseconds,
+  }) async {
+    final result = await Connectivity().checkConnectivity();
+    if (result == ConnectivityResult.none) return;
+
+    await FirebaseFirestore.instance.collection('featuresTime').add({
+      'feature': featureName,
+      'timeMs': milliseconds,
+      'timestamp': Timestamp.now(),
     });
   }
 
@@ -111,7 +127,25 @@ class _ChatConversationPageState extends State<ChatConversationPage> {
 
   Widget _buildMessages() {
     return StreamBuilder<List<ChatMessage>>(
-      stream: _controller.getMessagesStream(),
+      stream:
+          (() {
+            final inicio = DateTime.now();
+            final stream = _controller.getMessagesStream();
+
+            // Registramos tiempo solo la PRIMERA vez que llegan datos
+            late Stream<List<ChatMessage>> timedStream;
+            timedStream = stream.map((event) {
+              final fin = DateTime.now();
+              final duracion = fin.difference(inicio).inMilliseconds;
+              registrarFeatureTime(
+                featureName: 'chatmessage',
+                milliseconds: duracion,
+              );
+              return event;
+            });
+
+            return timedStream;
+          })(),
       builder: (context, snapshot) {
         if (!snapshot.hasData) {
           return const Center(child: CircularProgressIndicator());
