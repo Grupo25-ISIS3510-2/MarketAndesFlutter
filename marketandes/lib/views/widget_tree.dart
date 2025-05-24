@@ -15,6 +15,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:marketandes/views/pages/myproducts_page.dart';
 import 'dart:async';
 import 'package:marketandes/views/pages/profile_page.dart';
+import 'package:marketandes/views/pages/exchange_page.dart';
 
 class HomeWithNavbar extends StatefulWidget {
   final int selectedIndex;
@@ -47,7 +48,7 @@ class _HomeWithNavbarState extends State<HomeWithNavbar> {
 
     _selectedIndex = widget.selectedIndex;
 
-    _pages = const [HomePage(), AddPage(), ChatPage()];
+    _pages = const [HomePage(), AddPage(), ChatPage(), ExchangePage()];
 
     _revisarComprasPendientes();
     _revisarVentasPendientes();
