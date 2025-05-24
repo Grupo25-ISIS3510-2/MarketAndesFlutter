@@ -4,6 +4,7 @@ import 'package:marketandes/controllers/product_controller.dart';
 import 'package:marketandes/views/pages/product_detail_page.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -20,33 +21,57 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
+    _loadCategoriesFromLocal().then((loaded) {
+      if (!loaded) {
+        _fetchCategories();
+      }
+    });
     _controller.fetchUserPreferences().then((_) {
       setState(() {});
     });
-    _fetchCategories();
   }
 
-Future<void> _fetchCategories() async {
-  final recommendedProducts = await _controller.fetchRecommendedProducts();
-  final recommendedCategories = recommendedProducts.map((p) => p.category).toSet();
-
-  final snapshot = await FirebaseFirestore.instance.collection('products').get();
-  final categorySet = <String>{};
-
-  for (var doc in snapshot.docs) {
-    final category = doc['category'];
-    if (category != null && !recommendedCategories.contains(category)) {
-      categorySet.add(category.toString());
+  // Cargar categorías desde SharedPreferences
+  Future<bool> _loadCategoriesFromLocal() async {
+    final prefs = await SharedPreferences.getInstance();
+    final categories = prefs.getStringList('categories');
+    if (categories != null && categories.isNotEmpty) {
+      setState(() {
+        _categories = categories;
+      });
+      return true;
     }
+    return false;
   }
 
+  // Guardar categorías en SharedPreferences
+  Future<void> _saveCategoriesToLocal(List<String> categories) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList('categories', categories);
+  }
 
-  setState(() {
-    _categories = ['Todas', ...categorySet.toList()];
-  });
-}
+  Future<void> _fetchCategories() async {
+    final recommendedProducts = await _controller.fetchRecommendedProducts();
+    final recommendedCategories = recommendedProducts.map((p) => p.category).toSet();
 
+    final snapshot = await FirebaseFirestore.instance.collection('products').get();
+    final categorySet = <String>{};
 
+    for (var doc in snapshot.docs) {
+      final category = doc['category'];
+      if (category != null && !recommendedCategories.contains(category)) {
+        categorySet.add(category.toString());
+      }
+    }
+
+    final categoriesList = ['Todas', ...categorySet.toList()];
+
+    setState(() {
+      _categories = categoriesList;
+    });
+
+    await _saveCategoriesToLocal(categoriesList);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -129,54 +154,50 @@ Future<void> _fetchCategories() async {
     );
   }
 
-Widget _buildCategoryDropdown() {
-  return Container(
-    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-    decoration: BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(12),
-      boxShadow: [
-        BoxShadow(
-          color: Colors.black12,
-          blurRadius: 6,
-          offset: Offset(0, 3),
-        ),
-      ],
-    ),
-    child: DropdownButtonFormField<String>(
-      value: _selectedCategory,
-      icon: const Icon(Icons.keyboard_arrow_down, color: Colors.black),
-      decoration: const InputDecoration.collapsed(hintText: ''),
-      dropdownColor: Colors.white,
-      style: const TextStyle(
-        color: Colors.black,
-        fontFamily: 'Poppins',
-        fontSize: 16,
-      ),
-      onChanged: (value) {
-        if (value != null) {
-          setState(() {
-            _selectedCategory = value;
-          });
-        }
-      },
-      items: _categories.map((category) {
-        return DropdownMenuItem<String>(
-          value: category,
-          child: Text(
-            category,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontFamily: 'Poppins'),
+  Widget _buildCategoryDropdown() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: const [
+          BoxShadow(
+            color: Colors.black12,
+            blurRadius: 6,
+            offset: Offset(0, 3),
           ),
-        );
-      }).toList(),
-    ),
-  );
-}
-
-
-
-
+        ],
+      ),
+      child: DropdownButtonFormField<String>(
+        value: _selectedCategory,
+        icon: const Icon(Icons.keyboard_arrow_down, color: Colors.black),
+        decoration: const InputDecoration.collapsed(hintText: ''),
+        dropdownColor: Colors.white,
+        style: const TextStyle(
+          color: Colors.black,
+          fontFamily: 'Poppins',
+          fontSize: 16,
+        ),
+        onChanged: (value) {
+          if (value != null) {
+            setState(() {
+              _selectedCategory = value;
+            });
+          }
+        },
+        items: _categories.map((category) {
+          return DropdownMenuItem<String>(
+            value: category,
+            child: Text(
+              category,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontFamily: 'Poppins'),
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
 
   Widget _buildProductGrid(List<Product> products) {
     return GridView.builder(
