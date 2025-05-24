@@ -14,7 +14,7 @@ import 'package:marketandes/controllers/auth_controller.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:marketandes/views/pages/myproducts_page.dart';
 import 'dart:async';
-
+import 'package:marketandes/views/pages/profile_page.dart';
 
 class HomeWithNavbar extends StatefulWidget {
   final int selectedIndex;
@@ -463,8 +463,25 @@ class _HomeWithNavbarState extends State<HomeWithNavbar> {
                 Navigator.pop(context);
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => const MyProductsPage()),
+                  MaterialPageRoute(
+                    builder: (context) => const MyProductsPage(),
+                  ),
                 );
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.person, color: Colors.black),
+              title: const Text("Mi perfil"),
+              onTap: () {
+                Navigator.pop(context);
+                Future.delayed(const Duration(milliseconds: 200), () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => ProfilePage(),
+                    ), // <- SIN CONST
+                  );
+                });
               },
             ),
             ListTile(
