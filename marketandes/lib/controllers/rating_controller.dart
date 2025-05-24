@@ -7,39 +7,43 @@ class RatingController {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final Box _offlineBox = Hive.box('offlineUsers');
 
-Future<bool> submitRating(Rating rating) async {
-  final isConnected = await _checkConnection();
+  /// Envía la calificación. Si no hay conexión, la guarda localmente.
+  Future<bool> submitRating(Rating rating) async {
+    final bool isConnected = await _checkConnection();
 
-  if (isConnected) {
-    await _firestore.collection('shopping_reviews').add(rating.toMap());
-    return true; // enviado online
-  } else {
-    final List offlineRatings =
-        _offlineBox.get('pendingRatings', defaultValue: []) as List;
-    offlineRatings.add(rating.toMap());
-    await _offlineBox.put('pendingRatings', offlineRatings);
-    return false; // guardado offline
+    if (isConnected) {
+      await _firestore.collection('shopping_reviews').add(rating.toMap());
+      return true; // enviado online
+    } else {
+      final List offlineRatings = _offlineBox.get('pendingRatings', defaultValue: []) as List;
+      offlineRatings.add(rating.toMap());
+      await _offlineBox.put('pendingRatings', offlineRatings);
+      return false; // guardado offline
+    }
   }
-}
 
+  /// Reintenta enviar las calificaciones pendientes almacenadas localmente.
   Future<void> retryPendingRatings() async {
-    final isConnected = await _checkConnection();
+    final bool isConnected = await _checkConnection();
     if (!isConnected) return;
 
-    final List pendingRatings =
-        _offlineBox.get('pendingRatings', defaultValue: []) as List;
-    final reviewCollection = _firestore.collection('shopping_reviews');
+    final List pendingRatings = _offlineBox.get('pendingRatings', defaultValue: []) as List;
+    final CollectionReference reviewCollection = _firestore.collection('shopping_reviews');
 
-    for (var rating in pendingRatings) {
-      await reviewCollection.add(rating);
+    try {
+      for (final rating in pendingRatings) {
+        await reviewCollection.add(rating);
+      }
+      // Limpia los pendientes tras enviar con éxito
+      await _offlineBox.put('pendingRatings', []);
+    } catch (e) {
+      // Aquí se puede agregar logging o manejo de error si se desea
     }
-
-    // Limpiar los pendientes
-    await _offlineBox.put('pendingRatings', []);
   }
 
+  /// Verifica si el dispositivo tiene conexión a internet.
   Future<bool> _checkConnection() async {
-    final result = await Connectivity().checkConnectivity();
+    final ConnectivityResult result = await Connectivity().checkConnectivity();
     return result != ConnectivityResult.none;
   }
 }
