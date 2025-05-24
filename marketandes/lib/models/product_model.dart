@@ -38,7 +38,7 @@ class Product {
     );
   }
 
-    factory Product.fromMap(Map<String, dynamic> map) {
+  factory Product.fromMap(Map<String, dynamic> map) {
     return Product(
       name: map['name'] ?? 'Producto sin nombre',
       price: (map['price'] as num?)?.toInt() ?? 0,
@@ -50,5 +50,20 @@ class Product {
       category: map['category'] ?? 'General',
       isFavorite: false, // Se sobrescribe luego si es necesario
     );
+  }
+
+  // Nuevo método agregado para serializar el producto a Map<String, dynamic>
+  Map<String, dynamic> toMap() {
+    return {
+      'name': name,
+      'price': price,
+      'imageURL': imagePath,
+      'description': description,
+      'sellerID': sellerID,
+      'uidSeller': uidSeller,
+      'sellerRating': sellerRating,
+      'category': category,
+      'isFavorite': isFavorite,
+    };
   }
 }
