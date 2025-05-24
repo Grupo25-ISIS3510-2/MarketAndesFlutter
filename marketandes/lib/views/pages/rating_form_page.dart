@@ -1,7 +1,9 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
+
 import '../../controllers/rating_controller.dart';
 import '../../models/rating_model.dart';
-import 'package:connectivity_plus/connectivity_plus.dart';
 
 class RatingFormPage extends StatefulWidget {
   const RatingFormPage({super.key});
@@ -14,43 +16,56 @@ class _RatingFormPageState extends State<RatingFormPage> {
   int selectedRating = 0;
   final TextEditingController commentController = TextEditingController();
   final RatingController _ratingController = RatingController();
+  final Connectivity _connectivity = Connectivity();
+
+  late final StreamSubscription<ConnectivityResult> _connectivitySubscription;
   bool _isConnected = true;
   bool _isSubmitting = false;
-  late final Connectivity _connectivity;
 
   @override
   void initState() {
     super.initState();
-
-    _connectivity = Connectivity();
-
     _checkInitialConnection();
-
-    _connectivity.onConnectivityChanged.listen((ConnectivityResult result) {
-      setState(() {
-        _isConnected = result != ConnectivityResult.none;
-      });
-
-      if (_isConnected) {
-        _ratingController.retryPendingRatings();
+    _connectivitySubscription = _connectivity.onConnectivityChanged.listen((result) {
+      final connected = result != ConnectivityResult.none;
+      if (_isConnected != connected) {
+        setState(() => _isConnected = connected);
       }
+      if (connected) _ratingController.retryPendingRatings();
     });
+  }
+
+  @override
+  void dispose() {
+    _connectivitySubscription.cancel();
+    commentController.dispose();
+    super.dispose();
   }
 
   void _checkInitialConnection() async {
     final result = await _connectivity.checkConnectivity();
-    setState(() {
-      _isConnected = result != ConnectivityResult.none;
-    });
+    final isConnected = result != ConnectivityResult.none;
+    if (_isConnected != isConnected) {
+      setState(() {
+        _isConnected = isConnected;
+      });
+    }
+  }
+
+  void _showSnackbar(String message, {Color color = Colors.green}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: color,
+      ),
+    );
   }
 
   void _submitReview() async {
     if (!_isConnected) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('No hay conexión. Por favor, inténtalo cuando estés en línea.'),
-          backgroundColor: Colors.redAccent,
-        ),
+      _showSnackbar(
+        'No hay conexión. Por favor, inténtalo cuando estés en línea.',
+        color: Colors.redAccent,
       );
       return;
     }
@@ -65,9 +80,7 @@ class _RatingFormPageState extends State<RatingFormPage> {
 
     await _ratingController.submitRating(rating);
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Calificación enviada exitosamente')),
-    );
+    _showSnackbar('Calificación enviada exitosamente');
 
     setState(() {
       selectedRating = 0;
@@ -95,28 +108,30 @@ class _RatingFormPageState extends State<RatingFormPage> {
       ),
       body: Stack(
         children: [
-          Padding(
-            padding: const EdgeInsets.all(20.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const SizedBox(height: 20),
-                const Text(
-                  "¿Cómo fue tu experiencia?",
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF00296B),
+          SafeArea(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(20.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const SizedBox(height: 20),
+                  const Text(
+                    "¿Cómo fue tu experiencia?",
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF00296B),
+                    ),
                   ),
-                ),
-                const SizedBox(height: 20),
-                _buildStarRating(),
-                const SizedBox(height: 30),
-                _buildCommentBox(),
-                const SizedBox(height: 40),
-                _buildSubmitButton(),
-              ],
+                  const SizedBox(height: 20),
+                  _buildStarRating(),
+                  const SizedBox(height: 30),
+                  _buildCommentBox(),
+                  const SizedBox(height: 40),
+                  _buildSubmitButton(),
+                ],
+              ),
             ),
           ),
           if (!_isConnected)
@@ -161,6 +176,7 @@ class _RatingFormPageState extends State<RatingFormPage> {
         alignment: WrapAlignment.center,
         children: List.generate(5, (index) {
           return IconButton(
+            tooltip: 'Calificación de ${index + 1} estrellas',
             icon: Icon(
               Icons.star,
               color: index < selectedRating ? const Color(0xFFFDC500) : Colors.grey,
