@@ -4,10 +4,13 @@ import 'package:http/http.dart' as http;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:async/async.dart';
 import '../../controllers/session_state_controller.dart';
 import '../models/map_encounter_model.dart';
 
 class MapaEncuentroController {
+  CancelableOperation<List<LatLng>>? _rutaPendiente;
+
   Future<bool> verificarPermisosUbicacion() async {
     final status = await Permission.location.request();
     return status.isGranted;
@@ -70,7 +73,28 @@ class MapaEncuentroController {
         });
   }
 
-  Future<List<LatLng>> obtenerRuta(LatLng inicio, LatLng fin) {
+  Future<List<LatLng>> obtenerRuta(LatLng inicio, LatLng fin) async {
+    //  Cancelar operación anterior si aún está en curso
+    _rutaPendiente?.cancel();
+
+    final operation = CancelableOperation.fromFuture(
+      _obtenerRuta(inicio, fin),
+      onCancel: () {
+        print('Ruta cancelada antes de completarse');
+      },
+    );
+
+    _rutaPendiente = operation;
+
+    try {
+      final result = await operation.value;
+      return result;
+    } catch (_) {
+      return <LatLng>[];
+    }
+  }
+
+  Future<List<LatLng>> _obtenerRuta(LatLng inicio, LatLng fin) async {
     const apiKey = '5b3ce3597851110001cf624884acf4bb7f4849fda1b0d2d33d9cf0d1';
     final url = Uri.parse(
       'https://api.openrouteservice.org/v2/directions/foot-walking/geojson',
@@ -88,29 +112,24 @@ class MapaEncuentroController {
       'Content-Type': 'application/json',
     };
 
-    // Retornamos un Future explícito con .then y .catchError
-    return Future(() async {
-          final response = await http.post(url, headers: headers, body: body);
+    try {
+      final response = await http.post(url, headers: headers, body: body);
 
-          if (response.statusCode == 200) {
-            final data = jsonDecode(response.body);
-            final List<dynamic> coords =
-                data['features'][0]['geometry']['coordinates'];
-            return coords
-                .map<LatLng>((c) => LatLng(c[1].toDouble(), c[0].toDouble()))
-                .toList();
-          }
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final List<dynamic> coords =
+            data['features'][0]['geometry']['coordinates'];
 
-          print('Respuesta no exitosa: ${response.statusCode}');
-          return <LatLng>[];
-        })
-        .then((resultado) {
-          print('Ruta obtenida exitosamente con ${resultado.length} puntos.');
-          return resultado;
-        })
-        .catchError((e) {
-          print('Error al obtener ruta: $e');
-          return <LatLng>[]; // devolvemos lista vacía en caso de error
-        });
+        return coords
+            .map<LatLng>((c) => LatLng(c[1].toDouble(), c[0].toDouble()))
+            .toList();
+      } else {
+        print('Error al obtener ruta: Código ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Excepción al obtener ruta: $e');
+    }
+
+    return <LatLng>[];
   }
 }

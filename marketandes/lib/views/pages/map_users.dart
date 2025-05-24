@@ -158,8 +158,12 @@ class _MapaEncuentroPageState extends State<MapaEncuentroPage> {
         );
 
         if (!listEquals(ruta, nuevaRuta)) {
-          setState(() {
-            ruta = nuevaRuta;
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) {
+              setState(() {
+                ruta = nuevaRuta;
+              });
+            }
           });
         }
       }
@@ -289,46 +293,50 @@ class _MapaEncuentroPageState extends State<MapaEncuentroPage> {
             ),
           ),
           Expanded(
-            child: FlutterMap(
-              options: MapOptions(
-                center: puntoEncuentro,
-                zoom: 14,
-                minZoom: 8,
-                maxZoom: 18,
-              ),
-              children: [
-                TileLayer(
-                  urlTemplate:
-                      'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-                  subdomains: const ['a', 'b', 'c'],
-                  keepBuffer: 2, // esto mantiene tiles cercanos en memoria
-                  backgroundColor: Colors.transparent,
-                  tileBounds: LatLngBounds(LatLng(-90, -180), LatLng(90, 180)),
+            child: RepaintBoundary(
+              child: FlutterMap(
+                options: MapOptions(
+                  center: puntoEncuentro,
+                  zoom: 14,
+                  minZoom: 8,
+                  maxZoom: 18,
                 ),
-                MarkerLayer(
-                  markers: [
-                    _crearMarker(miUbicacion, 'Tú', Colors.blue),
-                    _crearMarker(
-                      ubicacionOtraPersona,
-                      widget.nombreUsuario,
-                      Colors.green,
-                    ),
-                    _crearMarker(puntoEncuentro, 'Encuentro', Colors.red),
-                  ],
-                ),
-                if (ruta.isNotEmpty)
-                  PolylineLayer(
-                    polylines: [
-                      Polyline(
-                        points: List<LatLng>.from(
-                          ruta,
-                        ), // asegura copia, no referencia
-                        strokeWidth: 4.0,
-                        color: Colors.blueAccent,
+                children: [
+                  TileLayer(
+                    urlTemplate:
+                        'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+                    subdomains: const ['a', 'b', 'c'],
+                    keepBuffer: 2, // Usa entero (NO false)
+                    backgroundColor: Colors.transparent,
+                    tileBuilder:
+                        (context, tileWidget, tile) =>
+                            RepaintBoundary(child: tileWidget),
+                  ),
+                  MarkerLayer(
+                    markers: [
+                      _crearMarker(miUbicacion, 'Tú', Colors.blue),
+                      _crearMarker(
+                        ubicacionOtraPersona,
+                        widget.nombreUsuario,
+                        Colors.green,
                       ),
+                      _crearMarker(puntoEncuentro, 'Encuentro', Colors.red),
                     ],
                   ),
-              ],
+                  if (ruta.isNotEmpty)
+                    PolylineLayer(
+                      polylines: [
+                        Polyline(
+                          points: [
+                            for (int i = 0; i < ruta.length; i += 5) ruta[i],
+                          ], // menos puntos aún
+                          strokeWidth: 4.0,
+                          color: Colors.blueAccent,
+                        ),
+                      ],
+                    ),
+                ],
+              ),
             ),
           ),
         ],
