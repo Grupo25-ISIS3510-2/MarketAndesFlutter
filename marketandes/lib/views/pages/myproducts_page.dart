@@ -3,6 +3,7 @@ import 'package:marketandes/models/product_model.dart';
 import 'package:marketandes/controllers/product_controller.dart';
 import 'package:marketandes/views/pages/product_detail_page.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
 class MyProductsPage extends StatefulWidget {
@@ -19,7 +20,20 @@ class _MyProductsPageState extends State<MyProductsPage> {
   @override
   void initState() {
     super.initState();
+    _trackVisitToMyProducts();
     _loadProducts();
+  }
+
+  Future<void> _trackVisitToMyProducts() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      await FirebaseFirestore.instance
+          .collection('user_product_section_visits')
+          .add({
+        'uid': user.uid,
+        'timestamp': Timestamp.now(),
+      });
+    }
   }
 
   Future<void> _loadProducts() async {
@@ -28,7 +42,8 @@ class _MyProductsPageState extends State<MyProductsPage> {
     final currentUid = FirebaseAuth.instance.currentUser?.uid;
 
     setState(() {
-      _myProducts = allProducts.where((p) => p.uidSeller == currentUid).toList();
+      _myProducts =
+          allProducts.where((p) => p.uidSeller == currentUid).toList();
     });
   }
 
@@ -88,7 +103,8 @@ class _MyProductsPageState extends State<MyProductsPage> {
       onTap: () {
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (_) => ProductDetailPage(product: product)),
+          MaterialPageRoute(
+              builder: (_) => ProductDetailPage(product: product)),
         );
       },
       child: Container(
@@ -112,16 +128,20 @@ class _MyProductsPageState extends State<MyProductsPage> {
                 Expanded(
                   child: Padding(
                     padding: const EdgeInsets.all(8.0),
-                    child: product.imagePath != null && product.imagePath!.isNotEmpty
+                    child: product.imagePath != null &&
+                            product.imagePath!.isNotEmpty
                         ? CachedNetworkImage(
                             imageUrl: product.imagePath!,
                             fit: BoxFit.contain,
                             placeholder: (context, url) =>
                                 const CircularProgressIndicator(),
-                            errorWidget: (context, url, error) =>
-                                const Icon(Icons.image_not_supported, size: 100, color: Colors.grey),
+                            errorWidget: (context, url, error) => const Icon(
+                                Icons.image_not_supported,
+                                size: 100,
+                                color: Colors.grey),
                           )
-                        : const Icon(Icons.image_not_supported, size: 100, color: Colors.grey),
+                        : const Icon(Icons.image_not_supported,
+                            size: 100, color: Colors.grey),
                   ),
                 ),
                 Padding(
