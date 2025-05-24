@@ -14,16 +14,21 @@ class MyProductsPage extends StatefulWidget {
 
 class _MyProductsPageState extends State<MyProductsPage> {
   final ProductController _controller = ProductController();
-  String? _currentUserId;
+  List<Product> _myProducts = [];
 
   @override
   void initState() {
     super.initState();
-    final user = FirebaseAuth.instance.currentUser;
-    _currentUserId = user?.uid;
+    _loadProducts();
+  }
 
-    _controller.fetchUserPreferences().then((_) {
-      setState(() {});
+  Future<void> _loadProducts() async {
+    await _controller.fetchUserPreferences();
+    final allProducts = await _controller.fetchAllProductsWithIsolate();
+    final currentUid = FirebaseAuth.instance.currentUser?.uid;
+
+    setState(() {
+      _myProducts = allProducts.where((p) => p.uidSeller == currentUid).toList();
     });
   }
 
@@ -32,47 +37,44 @@ class _MyProductsPageState extends State<MyProductsPage> {
     return Scaffold(
       backgroundColor: const Color(0xFFD8D8D8),
       appBar: AppBar(
-        title: const Text("Mis Productos"),
         backgroundColor: const Color(0xFF00296B),
+        title: const Text("Mis Productos"),
       ),
-      body: _currentUserId == null
-          ? const Center(child: Text("No estás autenticado"))
-          : FutureBuilder<List<Product>>(
-              future: _controller.fetchAllProductsWithIsolate(),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                } else if (snapshot.hasError) {
-                  return Center(child: Text('Error: ${snapshot.error}'));
-                } else {
-                  final allProducts = snapshot.data ?? [];
-                  final myProducts = allProducts
-                      .where((product) => product.sellerID == _currentUserId)
-                      .toList();
-
-                  if (myProducts.isEmpty) {
-                    return const Center(child: Text("No has publicado productos aún."));
-                  }
-
-                  return Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: _buildProductGrid(myProducts),
-                  );
-                }
-              },
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Center(
+              child: Text(
+                "Tus productos publicados",
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  fontFamily: 'Poppins',
+                  color: Colors.black,
+                ),
+              ),
             ),
+            const SizedBox(height: 20),
+            _buildProductGrid(_myProducts),
+          ],
+        ),
+      ),
     );
   }
 
   Widget _buildProductGrid(List<Product> products) {
     return GridView.builder(
-      itemCount: products.length,
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
         crossAxisSpacing: 10,
         mainAxisSpacing: 10,
         childAspectRatio: 3 / 4,
       ),
+      itemCount: products.length,
       itemBuilder: (context, index) {
         return _buildProductCard(products[index]);
       },
@@ -80,7 +82,7 @@ class _MyProductsPageState extends State<MyProductsPage> {
   }
 
   Widget _buildProductCard(Product product) {
-    bool isFavorite = _controller.userFavorites.contains(product.name);
+    final isFavorite = _controller.userFavorites.contains(product.name);
 
     return GestureDetector(
       onTap: () {
@@ -93,7 +95,13 @@ class _MyProductsPageState extends State<MyProductsPage> {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(12),
-          boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(2, 2))],
+          boxShadow: const [
+            BoxShadow(
+              color: Colors.black12,
+              blurRadius: 4,
+              offset: Offset(2, 2),
+            ),
+          ],
         ),
         child: Stack(
           alignment: Alignment.topRight,
@@ -108,8 +116,10 @@ class _MyProductsPageState extends State<MyProductsPage> {
                         ? CachedNetworkImage(
                             imageUrl: product.imagePath!,
                             fit: BoxFit.contain,
-                            placeholder: (context, url) => const CircularProgressIndicator(),
-                            errorWidget: (context, url, error) => const Icon(Icons.image_not_supported, size: 100, color: Colors.grey),
+                            placeholder: (context, url) =>
+                                const CircularProgressIndicator(),
+                            errorWidget: (context, url, error) =>
+                                const Icon(Icons.image_not_supported, size: 100, color: Colors.grey),
                           )
                         : const Icon(Icons.image_not_supported, size: 100, color: Colors.grey),
                   ),
