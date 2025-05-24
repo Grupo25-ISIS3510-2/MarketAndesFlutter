@@ -8,6 +8,7 @@ import 'package:connectivity_plus/connectivity_plus.dart'; // <-- Importar
 import '../../controllers/map_encounter_controller.dart';
 import '../../models/map_encounter_model.dart';
 import '../../controllers/session_state_controller.dart';
+import 'package:flutter/foundation.dart';
 
 class MapaEncuentroPage extends StatefulWidget {
   final String nombreUsuario;
@@ -147,9 +148,21 @@ class _MapaEncuentroPageState extends State<MapaEncuentroPage> {
     _stream = Geolocator.getPositionStream(locationSettings: settings).listen((
       position,
     ) async {
-      miUbicacion = LatLng(position.latitude, position.longitude);
-      ruta = await _controller.obtenerRuta(miUbicacion, puntoEncuentro);
-      setState(() {});
+      final nuevaUbicacion = LatLng(position.latitude, position.longitude);
+
+      if (nuevaUbicacion != miUbicacion) {
+        miUbicacion = nuevaUbicacion;
+        final nuevaRuta = await _controller.obtenerRuta(
+          miUbicacion,
+          puntoEncuentro,
+        );
+
+        if (!listEquals(ruta, nuevaRuta)) {
+          setState(() {
+            ruta = nuevaRuta;
+          });
+        }
+      }
     });
   }
 
@@ -160,8 +173,16 @@ class _MapaEncuentroPageState extends State<MapaEncuentroPage> {
       ubicacionOtraPersona,
     );
     await _controller.actualizarPuntoEncuentro(widget.chatId, puntoEncuentro);
-    ruta = await _controller.obtenerRuta(miUbicacion, puntoEncuentro);
-    setState(() {});
+    final nuevaRuta = await _controller.obtenerRuta(
+      miUbicacion,
+      puntoEncuentro,
+    );
+
+    if (!listEquals(ruta, nuevaRuta)) {
+      setState(() {
+        ruta = nuevaRuta;
+      });
+    }
   }
 
   @override
@@ -280,6 +301,9 @@ class _MapaEncuentroPageState extends State<MapaEncuentroPage> {
                   urlTemplate:
                       'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
                   subdomains: const ['a', 'b', 'c'],
+                  keepBuffer: 2, // esto mantiene tiles cercanos en memoria
+                  backgroundColor: Colors.transparent,
+                  tileBounds: LatLngBounds(LatLng(-90, -180), LatLng(90, 180)),
                 ),
                 MarkerLayer(
                   markers: [
@@ -296,7 +320,9 @@ class _MapaEncuentroPageState extends State<MapaEncuentroPage> {
                   PolylineLayer(
                     polylines: [
                       Polyline(
-                        points: ruta,
+                        points: List<LatLng>.from(
+                          ruta,
+                        ), // asegura copia, no referencia
                         strokeWidth: 4.0,
                         color: Colors.blueAccent,
                       ),
